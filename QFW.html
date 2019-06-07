@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="jp">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Quest for Volga</title>
+    <style>
+        * {
+            margin: 0px !important;
+        }
+    </style>
+</head>
+
+<body
+    style="background-color: orange;margin: 0px !important;margin-left: 200px !important;margin-right: 200px !important;">
+    <h1>Quest for Volga</h1>
+    <h2>ゲームの説明</h2>
+    <p>オンライン対戦国とりゲームだよ！自分の国を作って世界を征服しよう！画面に表示される指令をクリアしよう！
+        現在まったりと制作中です。</p>
+    <hr>
+    <img id="map" style="display: none" src="map.png">
+    <img id="whiteMap" style="display: none" src="whiteMap.png">
+    <div>
+        <div style="height: 100px;">
+            <img id="myCountryFlag" style="height: 100px;float: left;">
+            <div style="height: 100%">
+                <div id="myCountryName" style="height: 80%;font-size: 64px;">未選択</div>
+                <div id="text" style="height: 20%;">指令：国を選択するか、新しく国を作成してください</div>
+            </div>
+        </div>
+        <div style="height:1.5em;">
+            <img src="img/money.png" style="height: 100%;float: left;">
+            <div id="money">???(???/分)</div>
+        </div>
+    </div>
+    <canvas id="canvas" width="800" height="450" style="background-color: beige;"></canvas>
+    <script id="js" src="qfw.js"></script>
+    <br>
+    <input id="color" value="#ff0000" type="color">
+    <input id="mcName" type="text" value="国名">
+    <button type="submit" onclick="createCountry()">建国する！</button>
+    <button onclick="selectCountry()">国を選択</button>
+    <button id="annex" onclick="switchAnnexMode()">併合開始</button>
+    <button onclick="alert(new Date().getTime())">怪しい</button>
+</body>
+
+</html>
