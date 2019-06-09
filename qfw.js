@@ -321,3 +321,7 @@ function requestPhp(command, path, data) {
     request.send("command=" + command + "&path=" + path + "&data=" + data);
     return request.responseText;
 }
+
+function test() {
+    console.log(requestPhp(sql, "", ""));
+}
