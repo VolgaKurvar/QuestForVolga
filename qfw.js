@@ -6,7 +6,7 @@ const map = document.getElementById("map");
 const wMap = document.getElementById("whiteMap");
 let imgD = null, wMapImg = null;
 const FILL_SIZE = 200;
-let nx = 0, ny = 0, lastX = 0, lastY = 0, mapX = -2500, mapY = -300, myCountryColor = [255, 255, 255], annexMode = 0, lastTime = 0;
+let nx = 0, ny = 0, lastX = 0, lastY = 0, mapX = -2500, mapY = -300, myCountryColor = [255, 255, 255], annexMode = 0, lastTime = 0, myCountryId = null;
 
 onload = () => {
     canvas.width = map.width;
@@ -157,18 +157,16 @@ function createCountry() {
         alert("そのプロヴィンスは既に領有されています");
         return;
     }
-    const request = new XMLHttpRequest();
-    request.open("POST", "main.php", false);
-    request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-    request.send("command=createCountry&c=" + r + "," + g + "," + b + "," + document.getElementById("mcName").value + "&p=" + pr + "," + pg + "," + pb + "," + r + "," + g + "," + b + "," + (nx - mapX) + "," + (ny - mapY));
-    alert(request.responseText);
+    sqlRequest("INSERT INTO `country` (`name`, `r`, `g`, `b`, `money`, `timestamp`) VALUES ('" + document.getElementById("mcName").value + "', " + r + ", " + g + ", " + b + " , 0, NOW())");
+    myCountryId = sqlRequest("SELECT countryId from country order by countryId desc limit 1")[0].countryId; //最新のidを取得
+    annexProvince();
     fFill(nx - mapX, ny - mapY, r, g, b);
     ctx.putImageData(wMapImg, mapX, mapY);
     selectCountry();
 }
 
 function selectCountry() {
-    let [r, g, b] = getColor(imgD, nx - mapX, ny - mapY);
+    let [r, g, b] = getColor(imgD, nx - mapX, ny - mapY); //選択しているプロヴィンスのRGBを取得
     [r, g, b] = getOwnerRGB(r, g, b);
     const name = getOwnerName(r, g, b);
     if (name === "領有国なし") return;
@@ -177,10 +175,11 @@ function selectCountry() {
     myCountryColor = [r, g, b];
     document.getElementById("myCountryName").innerText = name;
     document.getElementById("money").innerText = getMoney(r, g, b);
+    myCountryId = getCountryId(r, g, b);
 }
 
-function annexProvince() {
-    if (document.getElementById("myCountryName").innerText === "未選択") return;
+function annexProvince() { //選択しているマスを選択している国で併合します
+    if (myCountryId == null) return;
 
     const [pr, pg, pb] = getColor(imgD, nx - mapX, ny - mapY);
     if (pr == 0 && pg == 0 && pb == 0) {
@@ -188,14 +187,10 @@ function annexProvince() {
         return;
     }
     if (isOwned(pr, pg, pb)) {
-        const request = new XMLHttpRequest();
-        request.open("POST", "main.php", false);
-        request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-        request.send("command=deleteProvince&p=" + (i + 1));
-        alert(request.responseText);
-    };
-    requestPhp("add", "provinces.csv", pr + "," + pg + "," + pb + "," + myCountryColor[0] + "," + myCountryColor[1] + "," + myCountryColor[2] + "," + (nx - mapX) + "," + (ny - mapY));
-    requestPhp("add", "log.csv", new Date().getTime() + ",provinces.csv,1");
+        sqlRequest("UPDATE province SET countryId=" + myCountryId + ",timestamp=NOW() WHERE r=" + pr + " AND g=" + pg + " AND b=" + pb);
+    } else {
+        sqlRequest("INSERT INTO `province` (`x`, `y`, `r`, `g`, `b`, `timestamp`, `countryId`) VALUES (" + (nx - mapX) + ", " + (ny - mapY) + ", " + pr + ", " + pg + ", " + pb + ", NOW(), " + myCountryId + ")");
+    }
     fFill(nx - mapX, ny - mapY, myCountryColor[0], myCountryColor[1], myCountryColor[2]);
     ctx.putImageData(wMapImg, mapX, mapY);
 }
@@ -253,6 +248,7 @@ function setColor(ImageData, x, y, r, g, b) {
 }
 
 function switchAnnexMode() {
+    if (myCountryId == null) return; //国が未選択だったら何もしない
     annexMode = 1 - annexMode;
     //console.log(annexMode);
     if (annexMode === 1) {
@@ -296,7 +292,9 @@ function sqlRequest(state = "") {
 }
 
 function test() {
-    console.log(sqlRequest("select * from country where r=249 and g=126 and b=99"));
+    console.log(sqlRequest("SELECT countryId,name from country order by countryId desc limit 3"));
+    //最新のプロヴィンス情報を取得↓
+    //SELECT * FROM province ORDER BY timestamp desc limit 3;
 }
 
 //imageDataObjectへの各種操作を提供するクラス W.I.P.
