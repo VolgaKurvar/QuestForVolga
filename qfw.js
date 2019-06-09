@@ -323,5 +323,11 @@ function requestPhp(command, path, data) {
 }
 
 function test() {
-    console.log(requestPhp(sql, "", ""));
+    const result = requestPhp("sql", "", "").split("error")[0].split("\n"); //なぜかついてくるerrorを除去
+    console.log(result);
+    let list = [];
+    for (let i = 0; i < result.length - 1; i++) { //配列の最後は空行なので飛ばす
+        list.push(JSON.parse(result[i]));
+    }
+    console.log(list);
 }

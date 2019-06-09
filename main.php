@@ -60,12 +60,13 @@ switch ($_POST['command']) {
 
         $q1="SELECT * FROM test";
         $q2="INSERT INTO test(c1,c2) VALUES ('test','test2')";
-        $q3="SHOW DATABASES";
+        $q3="SHOW TABLES";
         //$_POST['data']
         
-        $stmt = $pdo->query($q3);
+        $stmt = $pdo->query($_POST['data']);
+        header("Content-Type: application/json; charset=utf-8");
         while($row = $stmt -> fetch(PDO::FETCH_ASSOC)) {
-            var_dump($row);
+            echo json_encode($row)."\n";
         }
     default:
         print("error");
