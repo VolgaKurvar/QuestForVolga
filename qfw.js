@@ -21,13 +21,18 @@ onload = () => {
     canvas.addEventListener("mousedown", mdown, false);
     canvas.addEventListener("touchstart", mdown, false);
     document.getElementById("color").value = "#" + Math.floor(Math.random() * 256).toString(16) + Math.floor(Math.random() * 256).toString(16) + Math.floor(Math.random() * 256).toString(16);
+    for (const i of sqlRequest("select x,y,country.r,country.g,country.b from province inner join country on province.countryId=country.countryId")) {
+        fFill(parseInt(i.x), parseInt(i.y), parseInt(i.r), parseInt(i.g), parseInt(i.b));
+    }
+    ctx.putImageData(wMapImg, mapX, mapY);
+    /*
     const cCsv = csvToArray("provinces.csv?r=" + Math.random());
     for (let i = 0; i < cCsv.length; i++) {
         fFill(parseInt(cCsv[i][6]), parseInt(cCsv[i][7]), parseInt(cCsv[i][3]), parseInt(cCsv[i][4]), parseInt(cCsv[i][5]));
     }
     lastTime = new Date().getTime();
     document.getElementById("myCountryName").innerText = "未選択";
-    ctx.putImageData(wMapImg, mapX, mapY);
+    */
 
     setInterval(function () {
         const result = requestPhp("getUpdate", "log.csv", lastTime).split(";");
@@ -322,12 +327,15 @@ function requestPhp(command, path, data) {
     return request.responseText;
 }
 
-function test() {
-    const result = requestPhp("sql", "", "").split("error")[0].split("\n"); //なぜかついてくるerrorを除去
-    console.log(result);
+function sqlRequest(state = "") {
+    const result = requestPhp("sql", "", state).split("error")[0].split("\n"); //なぜかついてくるerrorを除去
     let list = [];
     for (let i = 0; i < result.length - 1; i++) { //配列の最後は空行なので飛ばす
         list.push(JSON.parse(result[i]));
     }
-    console.log(list);
+    return list;
+}
+
+function test() {
+    console.log(sqlRequest("SHOW TABLES"));
 }

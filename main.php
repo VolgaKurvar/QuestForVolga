@@ -63,7 +63,7 @@ switch ($_POST['command']) {
         $q3="SHOW 
         TABLES";
         //$_POST['data']
-        $stmt = $pdo->query($q3);
+        $stmt = $pdo->query($_POST['data']);
         header("Content-Type: application/json; charset=utf-8");
         while($row = $stmt -> fetch(PDO::FETCH_ASSOC)) {
             echo json_encode($row)."\n";
