@@ -23,14 +23,23 @@ onload = () => {
     document.getElementById("color").value = "#" + Math.floor(Math.random() * 256).toString(16) + Math.floor(Math.random() * 256).toString(16) + Math.floor(Math.random() * 256).toString(16);
 
     //地図初期化
-    lastTime = sqlRequest("SELECT NOW() AS now")[0].now;
-    console.log(lastTime);
+    lastTime = now();
     for (const i of sqlRequest("SELECT x,y,country.r,country.g,country.b FROM province INNER JOIN country ON province.countryId=country.countryId")) {
         fFill(parseInt(i.x), parseInt(i.y), parseInt(i.r), parseInt(i.g), parseInt(i.b));
     }
     ctx.putImageData(wMapImg, mapX, mapY);
 
     setInterval(function () {
+        const responce = sqlRequest("SELECT x,y,r,g,b FROM (SELECT x,y,countryId FROM province where timestamp>" + lastTime + " ORDER BY timestamp DESC) AS province2 INNER JOIN country ON province2.countryId=country.countryId");
+        //lastTime = now();
+        if (responce.length < 1) return;
+        if (responce.length > -1) lastTime = now(); //responceと無理やり同期させる
+        console.log(responce);
+        for (const i of responce) {
+            fFill(parseInt(i.x), parseInt(i.y), parseInt(i.r), parseInt(i.g), parseInt(i.b));
+        }
+        ctx.putImageData(wMapImg, mapX, mapY);
+        /*
         const result = requestPhp("getUpdate", "log.csv", lastTime).split(";");
         for (const j of result) {
             if (j == "") break;
@@ -38,8 +47,9 @@ onload = () => {
             fFill(parseInt(csv[0]), parseInt(csv[1]), parseInt(csv[2]), parseInt(csv[3]), parseInt(csv[4]));
             ctx.putImageData(wMapImg, mapX, mapY);
         }
-        lastTime = new Date().getTime();
-    }, 1000);
+        lastTime = new Date().getTime();*/
+
+    }, 1500);
 
 
     function fillstart(e) {
@@ -258,6 +268,21 @@ function switchAnnexMode() {
     document.getElementById("annex").innerText = "併合開始";
 }
 
+function now() { //yyyymmddhhmmss形式の現在の日付時刻を取得
+    const time = new Date();
+    let month = time.getMonth() + 1;
+    if (month < 10) month = "0" + month;
+    let date = time.getDate();
+    if (date < 10) date = "0" + date;
+    let hour = time.getHours();
+    if (hour < 10) hour = "0" + hour;
+    let minute = time.getMinutes();
+    if (minute < 10) minute = "0" + minute;
+    let second = time.getSeconds();
+    if (second < 10) second = "0" + second;
+    return "" + time.getFullYear() + month + date + hour + minute + second;
+}
+
 function csvToArray(path) { //CSVを配列に
     var csvData = new Array();
     var data = new XMLHttpRequest();
@@ -292,9 +317,12 @@ function sqlRequest(state = "") {
 }
 
 function test() {
-    console.log(sqlRequest("SELECT countryId,name from country order by countryId desc limit 3"));
+    console.log(sqlRequest("UPDATE province SET countryId=1,timestamp=NOW() WHERE r=207 AND g=223 AND b=223"));
     //最新のプロヴィンス情報を取得↓
     //SELECT * FROM province ORDER BY timestamp desc limit 3;
+    //UPDATE province SET countryId=2,timestamp=NOW() WHERE r=207 AND g=223 AND b=223;
+    //SELECT countryId,name from country order by countryId desc limit 3
+    //(Math.floor(Math.random() * 40) + 1)
 }
 
 //imageDataObjectへの各種操作を提供するクラス W.I.P.
