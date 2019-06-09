@@ -153,7 +153,7 @@ function createCountry() {
         alert("国境線です");
         return;
     }
-    if (isOwned(pr, pg, pb) > -1) {
+    if (isOwned(pr, pg, pb)) {
         alert("そのプロヴィンスは既に領有されています");
         return;
     }
@@ -176,7 +176,7 @@ function selectCountry() {
     document.getElementById("myCountryFlag").src = "img/" + r + "." + g + "." + b + ".png";
     myCountryColor = [r, g, b];
     document.getElementById("myCountryName").innerText = name;
-    document.getElementById("money").innerText = getCountryMoney(r, g, b);
+    document.getElementById("money").innerText = getMoney(r, g, b);
 }
 
 function annexProvince() {
@@ -187,8 +187,7 @@ function annexProvince() {
         alert("国境線です");
         return;
     }
-    const i = isOwned(pr, pg, pb);
-    if (i > -1) {
+    if (isOwned(pr, pg, pb)) {
         const request = new XMLHttpRequest();
         request.open("POST", "main.php", false);
         request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
@@ -205,44 +204,34 @@ function toImgDElem(x, y) {
     return (x + wMapImg.width * y) * 4;
 }
 
-function getOwnerRGB(r, g, b) {
-    const color = sqlRequest("SELECT r,g,b FROM country WHERE countryId=(SELECT countryId FROM province WHERE r=" + r + " AND g=" + g + " AND b=" + b + ")");
-    if (color.length < 1) return [255, 255, 255]; //国が見つからなかった時
-    return [color[0].r, color[0].g, color[0].b];
+function getOwnerRGB(r, g, b) { //プロヴィンスカラーから領有国カラーを求めます
+    const responce = sqlRequest("SELECT r,g,b FROM country WHERE countryId=(SELECT countryId FROM province WHERE r=" + r + " AND g=" + g + " AND b=" + b + ")");
+    if (responce.length < 1) return [255, 255, 255]; //国が見つからなかった時
+    return [responce[0].r, responce[0].g, responce[0].b];
 }
 
-function getOwnerName(r, g, b) {
-    for (const i of csvToArray("countries.csv?r=" + Math.random())) { //プロヴィンスを領有国の色で塗りつぶす
-        //console.log(i);
-        if (parseInt(i[0]) === r && parseInt(i[1]) === g && parseInt(i[2]) === b) {
-            //console.log(r + "=" + parseInt(i[0]), g + "=" + parseInt(i[1]), i[2] + "=" + parseInt(i[2]));
-            //console.log("Found!", r, g, b)
-            return i[3];
-        }
-    }
-    return "領有国なし";
+function getOwnerName(r, g, b) { //国カラーから領有国名を求めます
+    const responce = sqlRequest("SELECT name FROM country WHERE r=" + r + " AND g=" + g + " AND b=" + b);
+    if (responce.length < 1) return "領有国なし"; //国が見つからなかった時
+    return responce[0].name;
 }
 
-function getCountryMoney(r, g, b) {
-    for (const i of csvToArray("countries.csv?r=" + Math.random())) { //プロヴィンスを領有国の色で塗りつぶす
-        //console.log(i);
-        if (parseInt(i[0]) === r && parseInt(i[1]) === g && parseInt(i[2]) === b) {
-            //console.log(r + "=" + parseInt(i[0]), g + "=" + parseInt(i[1]), i[2] + "=" + parseInt(i[2]));
-            //console.log("Found!", r, g, b)
-            return i[4];
-        }
-    }
-    return "データなし";
+function getMoney(r, g, b) { //国カラーから資金を求めます
+    const responce = sqlRequest("SELECT money FROM country WHERE r=" + r + " AND g=" + g + " AND b=" + b);
+    if (responce.length < 1) return "不明"; //国が見つからなかった時
+    return responce[0].money;
 }
 
-function isOwned(pr, pg, pb) {
-    const pCsv = csvToArray("provinces.csv?r=" + Math.random());
-    for (const i of pCsv) {
-        if (parseInt(i[0]) == pr && parseInt(i[1]) == pg && parseInt(i[2]) == pb) {
-            return i + 1;
-        }
-    }
-    return -1;
+function getCountryId(r, g, b) { //国カラーから国IDを求めます
+    const responce = sqlRequest("SELECT countryId FROM country WHERE r=" + r + " AND g=" + g + " AND b=" + b);
+    if (responce.length < 1) return null; //国が見つからなかった時
+    return responce[0].countryId;
+}
+
+function isOwned(r, g, b) {
+    const [or, og, ob] = getOwnerRGB(r, g, b);
+    if (or == 255, og == 255, ob == 255) return false;
+    return true;
 }
 
 function getColor(imgD, x, y) {
