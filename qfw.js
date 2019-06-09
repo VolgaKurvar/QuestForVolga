@@ -21,18 +21,14 @@ onload = () => {
     canvas.addEventListener("mousedown", mdown, false);
     canvas.addEventListener("touchstart", mdown, false);
     document.getElementById("color").value = "#" + Math.floor(Math.random() * 256).toString(16) + Math.floor(Math.random() * 256).toString(16) + Math.floor(Math.random() * 256).toString(16);
-    for (const i of sqlRequest("select x,y,country.r,country.g,country.b from province inner join country on province.countryId=country.countryId")) {
+
+    //地図初期化
+    lastTime = sqlRequest("SELECT NOW() AS now")[0].now;
+    console.log(lastTime);
+    for (const i of sqlRequest("SELECT x,y,country.r,country.g,country.b FROM province INNER JOIN country ON province.countryId=country.countryId")) {
         fFill(parseInt(i.x), parseInt(i.y), parseInt(i.r), parseInt(i.g), parseInt(i.b));
     }
     ctx.putImageData(wMapImg, mapX, mapY);
-    /*
-    const cCsv = csvToArray("provinces.csv?r=" + Math.random());
-    for (let i = 0; i < cCsv.length; i++) {
-        fFill(parseInt(cCsv[i][6]), parseInt(cCsv[i][7]), parseInt(cCsv[i][3]), parseInt(cCsv[i][4]), parseInt(cCsv[i][5]));
-    }
-    lastTime = new Date().getTime();
-    document.getElementById("myCountryName").innerText = "未選択";
-    */
 
     setInterval(function () {
         const result = requestPhp("getUpdate", "log.csv", lastTime).split(";");
@@ -43,23 +39,6 @@ onload = () => {
             ctx.putImageData(wMapImg, mapX, mapY);
         }
         lastTime = new Date().getTime();
-        /* 旧関数 通信量が多い
-        for (const i of csvToArray("log.csv?r=" + Math.random())) {
-            if (parseInt(i[0]) > lastTime) {
-                console.log(Math.floor(parseInt(i[0]) - lastTime));
-                if (i[1] == "provinces.csv") {
-                    const csv = csvToArray("provinces.csv?r=" + Math.random());
-                    lastTime = new Date().getTime();
-                    console.log(parseInt(i[2]));
-                    for (let j = csv.length - parseInt(i[2]); j < csv.length; j++) {
-                        console.log(csv[j]);
-                        fFill(parseInt(csv[j][6]), parseInt(csv[j][7]), parseInt(csv[j][3]), parseInt(csv[j][4]), parseInt(csv[j][5]));
-                        ctx.putImageData(wMapImg, mapX, mapY);
-                    }
-                }
-            }
-        }
-        */
     }, 1000);
 
 
@@ -133,6 +112,7 @@ onload = () => {
 }
 
 //古い関数です スタックオーバーフローします
+/*
 function fill(x, y, nr, ng, nb, or, og, ob) {
     const en = toImgDElem(x, y);
     if (wMapImg.data[en] != or || wMapImg.data[en + 1] != og || wMapImg.data[en + 2] != ob) return;
@@ -143,8 +123,7 @@ function fill(x, y, nr, ng, nb, or, og, ob) {
     fill(x, y + 1, nr, ng, nb, or, og, ob);
     fill(x - 1, y, nr, ng, nb, or, og, ob);
     fill(x, y - 1, nr, ng, nb, or, og, ob);
-}
-
+}*/
 
 function fFill(x, y, r, g, b) {
     const [opr, opg, opb] = getColor(imgD, x, y);
@@ -165,12 +144,9 @@ function createCountry() {
     const r = parseInt(color.substring(1, 3), 16);
     const g = parseInt(color.substring(3, 5), 16);
     const b = parseInt(color.substring(5, 7), 16);
-    const cCsv = csvToArray("countries.csv?r=" + Math.random());
-    for (const i of cCsv) {
-        if (parseInt(i[0]) == r && parseInt(i[1]) == g && parseInt(i[2]) == b) {
-            alert("同じ色を使用している国家が既に存在します");
-            return;
-        }
+    if (sqlRequest("SELECT * FROM country WHERE r=" + r + " AND g=" + g + " AND b=" + b).length > 0) {
+        alert("同じ色を使用している国家が既に存在します");
+        return;
     }
     const [pr, pg, pb] = getColor(imgD, nx - mapX, ny - mapY);
     if (pr == 0 && pg == 0 && pb == 0) {
@@ -230,15 +206,9 @@ function toImgDElem(x, y) {
 }
 
 function getOwnerRGB(r, g, b) {
-    for (const i of csvToArray("provinces.csv?r=" + Math.random())) {
-        //console.log(i);
-        if (parseInt(i[0]) === r && parseInt(i[1]) === g && parseInt(i[2]) === b) {
-            //console.log(r + "=" + parseInt(i[0]), g + "=" + parseInt(i[1]), i[2] + "=" + parseInt(i[2]));
-            //console.log("Found!", r, g, b)
-            return [parseInt(i[3]), parseInt(i[4]), parseInt(i[5])];
-        }
-    }
-    return [255, 255, 255];
+    const color = sqlRequest("SELECT r,g,b FROM country WHERE countryId=(SELECT countryId FROM province WHERE r=" + r + " AND g=" + g + " AND b=" + b + ")");
+    if (color.length < 1) return [255, 255, 255]; //国が見つからなかった時
+    return [color[0].r, color[0].g, color[0].b];
 }
 
 function getOwnerName(r, g, b) {
@@ -337,5 +307,11 @@ function sqlRequest(state = "") {
 }
 
 function test() {
-    console.log(sqlRequest("SHOW TABLES"));
+    console.log(sqlRequest("select * from country where r=249 and g=126 and b=99"));
+}
+
+//imageDataObjectへの各種操作を提供するクラス W.I.P.
+class ImageDataUtil {
+    constructor() {
+    }
 }
