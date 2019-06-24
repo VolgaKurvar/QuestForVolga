@@ -6,7 +6,7 @@ const map = document.getElementById("map");
 const wMap = document.getElementById("whiteMap");
 let imgD = null, wMapImg = null;
 const FILL_SIZE = 200;
-let nx = 0, ny = 0, lastX = 0, lastY = 0, mapX = -2500, mapY = -300, myCountryColor = [255, 255, 255], annexMode = 0, pLastTime = 0,cLastTime = 0, myCountryId = null;
+let nx = 0, ny = 0, lastX = 0, lastY = 0, mapX = -2500, mapY = -300, myCountryColor = [255, 255, 255], annexMode = 0, pLastTime = 0,cLastTime = 0, myCountryId = null,targetCountryId=null;
 
 onload = () => {
     canvas.width = map.width;
@@ -68,6 +68,11 @@ onload = () => {
         //console.log(getColor(imgD, lastX, lastY));
         ctx.putImageData(wMapImg, mapX, mapY);
         if (annexMode == 1) annexProvince();
+        [r, g, b] = getColor(imgD, lastX, lastY);
+        [r,g,b]=getOwnerRGB(r,g,b);
+        document.getElementById("targetCountryFlag").src = "img/" + r + "." + g + "." + b + ".png";
+        document.getElementById("targetCountryName").innerText=getOwnerName(r,g,b);
+        targetCountryId=getCountryId(r,g,b);
     }
 
     function mdown(e) {
@@ -290,6 +295,11 @@ function disarm(){ //軍縮
     }
     document.getElementById("military").innerText=--military;
     sqlRequest("UPDATE country SET timestamp=NOW(),military="+military+" WHERE countryId="+myCountryId);
+}
+
+function declareWar(){ //宣戦布告
+    if(myCountryId==null || targetCountryId==null) return;
+    sqlRequest("SELECT * FROM war WHERE (countryIdA="+myCountryId+" AND countryIdB="+targetCountryId+")");
 }
 
 function now() { //yyyymmddhhmmss形式の現在の日付時刻を取得
