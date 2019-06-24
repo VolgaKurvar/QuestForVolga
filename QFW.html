@@ -30,9 +30,11 @@
                 <div id="text" style="height: 20%;">指令：国を選択するか、新しく国を作成してください</div>
             </div>
         </div>
-        <div style="height:1.5em;">
+        <div style="height:1.5em;">            
             <img src="img/money.png" style="height: 100%;float: left;">
-            <div id="money">???(???/分)</div>
+            <span id="money">???</span>
+            <span>軍事力</span>                        
+            <span id="military">???</span>      
         </div>
     </div>
     <canvas id="canvas" width="800" height="450" style="background-color: beige;"></canvas>
@@ -43,6 +45,8 @@
     <button type="submit" onclick="createCountry()">建国する！</button>
     <button onclick="selectCountry()">国を選択</button>
     <button id="annex" onclick="switchAnnexMode()">併合開始</button>
+    <button id="expandArmy" onclick="expandArmy()" disabled>軍拡する</button>
+    <button id="disarm" onclick="disarm()" disabled>軍縮する</button>
     <button onclick="test()">怪しい</button>
 </body>
 

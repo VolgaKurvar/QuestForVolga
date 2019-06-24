@@ -6,7 +6,7 @@ const map = document.getElementById("map");
 const wMap = document.getElementById("whiteMap");
 let imgD = null, wMapImg = null;
 const FILL_SIZE = 200;
-let nx = 0, ny = 0, lastX = 0, lastY = 0, mapX = -2500, mapY = -300, myCountryColor = [255, 255, 255], annexMode = 0, lastTime = 0, myCountryId = null;
+let nx = 0, ny = 0, lastX = 0, lastY = 0, mapX = -2500, mapY = -300, myCountryColor = [255, 255, 255], annexMode = 0, pLastTime = 0,cLastTime = 0, myCountryId = null;
 
 onload = () => {
     canvas.width = map.width;
@@ -23,32 +23,35 @@ onload = () => {
     document.getElementById("color").value = "#" + Math.floor(Math.random() * 256).toString(16) + Math.floor(Math.random() * 256).toString(16) + Math.floor(Math.random() * 256).toString(16);
 
     //地図初期化
-    lastTime = now();
+    pLastTime = now();
+    cLastTime = now();
     for (const i of sqlRequest("SELECT x,y,country.r,country.g,country.b FROM province INNER JOIN country ON province.countryId=country.countryId")) {
         fFill(parseInt(i.x), parseInt(i.y), parseInt(i.r), parseInt(i.g), parseInt(i.b));
     }
     ctx.putImageData(wMapImg, mapX, mapY);
 
-    setInterval(function () {
-        const responce = sqlRequest("SELECT x,y,r,g,b FROM (SELECT x,y,countryId FROM province where timestamp>" + lastTime + " ORDER BY timestamp DESC) AS province2 INNER JOIN country ON province2.countryId=country.countryId");
-        //lastTime = now();
-        if (responce.length < 1) return;
-        if (responce.length > -1) lastTime = now(); //responceと無理やり同期させる
-        console.log(responce);
-        for (const i of responce) {
-            fFill(parseInt(i.x), parseInt(i.y), parseInt(i.r), parseInt(i.g), parseInt(i.b));
-        }
-        ctx.putImageData(wMapImg, mapX, mapY);
-        /*
-        const result = requestPhp("getUpdate", "log.csv", lastTime).split(";");
-        for (const j of result) {
-            if (j == "") break;
-            const csv = j.split(",");
-            fFill(parseInt(csv[0]), parseInt(csv[1]), parseInt(csv[2]), parseInt(csv[3]), parseInt(csv[4]));
+    setInterval(()=> {
+        //地図更新
+        let responce = sqlRequest("SELECT x,y,r,g,b FROM (SELECT x,y,countryId FROM province where timestamp>" + pLastTime + " ORDER BY timestamp DESC) AS province2 INNER JOIN country ON province2.countryId=country.countryId");
+        if (responce.length >= 1) { //プロヴィンスに関して更新があったら
+            if (responce.length > -1) pLastTime = now(); //responceと無理やり同期させる
+            console.log(responce);
+            for (const i of responce) {
+                fFill(parseInt(i.x), parseInt(i.y), parseInt(i.r), parseInt(i.g), parseInt(i.b));
+            }
             ctx.putImageData(wMapImg, mapX, mapY);
+        }        
+        
+        //国情報更新
+        if(myCountryId!=null){ //自国が選択済みならば            
+            const responce = sqlRequest("SELECT money FROM country WHERE countryId="+myCountryId+" AND timestamp>"+ cLastTime);
+            if (responce.length < 1) return;
+            if (responce.length > -1) cLastTime = now(); //responceと無理やり同期させる
+            console.log(responce);
+            for (const i of responce) {
+                document.getElementById("money").innerText = i.money;
+            }
         }
-        lastTime = new Date().getTime();*/
-
     }, 1500);
 
 
@@ -186,6 +189,9 @@ function selectCountry() {
     document.getElementById("myCountryName").innerText = name;
     document.getElementById("money").innerText = getMoney(r, g, b);
     myCountryId = getCountryId(r, g, b);
+    document.getElementById("military").innerText = sqlRequest("SELECT military FROM country WHERE countryId="+myCountryId)[0].military;
+    document.getElementById("expandArmy").disabled=false;
+    document.getElementById("disarm").disabled=false;
 }
 
 function annexProvince() { //選択しているマスを選択している国で併合します
@@ -266,6 +272,24 @@ function switchAnnexMode() {
         return;
     }
     document.getElementById("annex").innerText = "併合開始";
+}
+
+function expandArmy(){ //軍を拡大
+    let military=parseInt(document.getElementById("military").innerText);
+    document.getElementById("military").innerText=++military;
+    document.getElementById("disarm").disabled=false;
+    sqlRequest("UPDATE country SET timestamp=NOW(),military="+military+" WHERE countryId="+myCountryId);
+}
+
+function disarm(){ //軍縮
+    let military=parseInt(document.getElementById("military").innerText);
+    if(military<=0){
+        document.getElementById("text").innerText="これ以上軍縮はできません";
+        document.getElementById("disarm").disabled=true;
+        return;
+    }
+    document.getElementById("military").innerText=--military;
+    sqlRequest("UPDATE country SET timestamp=NOW(),military="+military+" WHERE countryId="+myCountryId);
 }
 
 function now() { //yyyymmddhhmmss形式の現在の日付時刻を取得
