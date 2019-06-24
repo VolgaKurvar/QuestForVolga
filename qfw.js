@@ -235,13 +235,13 @@ function getOwnerName(r, g, b) { //国カラーから領有国名を求めます
 function getMoney(r, g, b) { //国カラーから資金を求めます
     const responce = sqlRequest("SELECT money FROM country WHERE r=" + r + " AND g=" + g + " AND b=" + b);
     if (responce.length < 1) return "不明"; //国が見つからなかった時
-    return responce[0].money;
+    return parseInt(responce[0].money);
 }
 
 function getCountryId(r, g, b) { //国カラーから国IDを求めます
     const responce = sqlRequest("SELECT countryId FROM country WHERE r=" + r + " AND g=" + g + " AND b=" + b);
     if (responce.length < 1) return null; //国が見つからなかった時
-    return responce[0].countryId;
+    return parseInt(responce[0].countryId);
 }
 
 function isOwned(r, g, b) {
@@ -298,8 +298,15 @@ function disarm(){ //軍縮
 }
 
 function declareWar(){ //宣戦布告
-    if(myCountryId==null || targetCountryId==null) return;
-    sqlRequest("SELECT * FROM war WHERE (countryIdA="+myCountryId+" AND countryIdB="+targetCountryId+")");
+    if(myCountryId==null || targetCountryId==null || myCountryId==targetCountryId) return;
+    const request=sqlRequest("SELECT * FROM war WHERE ((countryIdA='"+myCountryId+"' AND countryIdB='"+targetCountryId+"') OR (countryIdA='"+targetCountryId+"'AND countryIdB='"+myCountryId+"'))");
+    console.log(request);
+    if(request.length>0){
+        document.getElementById("text").innerText="すでに戦争状態です。";
+        return;
+    }
+    document.getElementById("text").innerText="宣戦布告しました！";
+    sqlRequest("INSERT INTO war VALUES ("+myCountryId+","+targetCountryId+")");
 }
 
 function now() { //yyyymmddhhmmss形式の現在の日付時刻を取得
@@ -351,7 +358,7 @@ function sqlRequest(state = "") {
 }
 
 function test() {
-    console.log(sqlRequest("UPDATE province SET countryId=1,timestamp=NOW() WHERE r=207 AND g=223 AND b=223"));
+    console.log(sqlRequest("SELECT * FROM war"));
     //最新のプロヴィンス情報を取得↓
     //SELECT * FROM province ORDER BY timestamp desc limit 3;
     //UPDATE province SET countryId=2,timestamp=NOW() WHERE r=207 AND g=223 AND b=223;
