@@ -1,20 +1,19 @@
 "use strict";
 
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext('2d');
-const map = document.getElementById("map");
-const wMap = document.getElementById("whiteMap");
-let imgD = null, wMapImg = null;
 const FILL_SIZE = 200;
-let nx = 0, ny = 0, lastX = 0, lastY = 0, mapX = -2500, mapY = -300, myCountryColor = [255, 255, 255], annexMode = 0, pLastTime = 0,cLastTime = 0, myCountryId = null,targetCountryId=null;
+let provinceMap = null, politicalMap = null;
+let nx = 0, ny = 0, lastX = 0, lastY = 0, mapX = -2500, mapY = -300, myCountryColor = [255, 255, 255], annexMode = 0, pLastTime = 0, cLastTime = 0, myCountryId = null, targetCountryId = null;
 
 onload = () => {
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext('2d');
+    const map = document.getElementById("map");
     canvas.width = map.width;
     canvas.height = map.height;
     ctx.drawImage(map, 0, 0, map.width, map.height);
-    imgD = ctx.getImageData(0, 0, map.width, map.height);
-    ctx.drawImage(wMap, 0, 0, map.width, map.height);
-    wMapImg = ctx.getImageData(0, 0, map.width, map.height);
+    provinceMap = new ImageDataController(ctx.getImageData(0, 0, map.width, map.height));
+    ctx.drawImage(document.getElementById("whiteMap"), 0, 0, map.width, map.height);
+    politicalMap = new ImageDataController(ctx.getImageData(0, 0, map.width, map.height));
     canvas.width = 960;
     canvas.height = 540;
     canvas.addEventListener("click", fillstart, false);
@@ -28,9 +27,9 @@ onload = () => {
     for (const i of sqlRequest("SELECT x,y,country.r,country.g,country.b FROM province INNER JOIN country ON province.countryId=country.countryId")) {
         fFill(parseInt(i.x), parseInt(i.y), parseInt(i.r), parseInt(i.g), parseInt(i.b));
     }
-    ctx.putImageData(wMapImg, mapX, mapY);
+    ctx.putImageData(politicalMap.imageData, mapX, mapY);
 
-    setInterval(()=> {
+    setInterval(() => {
         //地図更新
         let responce = sqlRequest("SELECT x,y,r,g,b FROM (SELECT x,y,countryId FROM province where timestamp>" + pLastTime + " ORDER BY timestamp DESC) AS province2 INNER JOIN country ON province2.countryId=country.countryId");
         if (responce.length >= 1) { //プロヴィンスに関して更新があったら
@@ -39,12 +38,12 @@ onload = () => {
             for (const i of responce) {
                 fFill(parseInt(i.x), parseInt(i.y), parseInt(i.r), parseInt(i.g), parseInt(i.b));
             }
-            ctx.putImageData(wMapImg, mapX, mapY);
-        }        
-        
+            ctx.putImageData(politicalMap.imageData, mapX, mapY);
+        }
+
         //国情報更新
-        if(myCountryId!=null){ //自国が選択済みならば            
-            const responce = sqlRequest("SELECT money FROM country WHERE countryId="+myCountryId+" AND timestamp>"+ cLastTime);
+        if (myCountryId != null) { //自国が選択済みならば            
+            const responce = sqlRequest("SELECT money FROM country WHERE countryId=" + myCountryId + " AND timestamp>" + cLastTime);
             if (responce.length < 1) return;
             if (responce.length > -1) cLastTime = now(); //responceと無理やり同期させる
             console.log(responce);
@@ -56,7 +55,7 @@ onload = () => {
 
 
     function fillstart(e) {
-        let [r, g, b] = getColor(imgD, lastX, lastY);
+        let [r, g, b] = provinceMap.getColor(lastX, lastY);
         console.log(r, g, b);
         //console.log("x=" + lastX + "y=" + lastY + "pr=" + r + "pg=" + g + "pb=" + b);
         [r, g, b] = getOwnerRGB(r, g, b);
@@ -65,14 +64,14 @@ onload = () => {
         lastX = e.offsetX - mapX;
         lastY = e.offsetY - mapY;
         fFill(lastX, lastY, 255, 0, 0);
-        //console.log(getColor(imgD, lastX, lastY));
-        ctx.putImageData(wMapImg, mapX, mapY);
+        //console.log(getColor(provinceMap.imageData, lastX, lastY));
+        ctx.putImageData(politicalMap.imageData, mapX, mapY);
         if (annexMode == 1) annexProvince();
-        [r, g, b] = getColor(imgD, lastX, lastY);
-        [r,g,b]=getOwnerRGB(r,g,b);
+        [r, g, b] = provinceMap.getColor(lastX, lastY);
+        [r, g, b] = getOwnerRGB(r, g, b);
         document.getElementById("targetCountryFlag").src = "img/" + r + "." + g + "." + b + ".png";
-        document.getElementById("targetCountryName").innerText=getOwnerName(r,g,b);
-        targetCountryId=getCountryId(r,g,b);
+        document.getElementById("targetCountryName").innerText = getOwnerName(r, g, b);
+        targetCountryId = getCountryId(r, g, b);
     }
 
     function mdown(e) {
@@ -114,7 +113,7 @@ onload = () => {
         else if (mapX - canvas.width < -1 * map.width) mapX = -1 * map.width + canvas.width;
         if (mapY > 0) mapY = 0;
         else if (mapY - canvas.height < -1 * map.height) mapY = -1 * map.height + canvas.height;
-        ctx.putImageData(wMapImg, mapX, mapY);
+        ctx.putImageData(politicalMap.imageData, mapX, mapY);
         nx = event.offsetX;
         ny = event.offsetY;
     }
@@ -132,11 +131,11 @@ onload = () => {
 //古い関数です スタックオーバーフローします
 /*
 function fill(x, y, nr, ng, nb, or, og, ob) {
-    const en = toImgDElem(x, y);
-    if (wMapImg.data[en] != or || wMapImg.data[en + 1] != og || wMapImg.data[en + 2] != ob) return;
-    wMapImg.data[en] = nr;
-    wMapImg.data[en + 1] = ng;
-    wMapImg.data[en + 2] = nb;
+    const en = toprovinceMap.imageDataElem(x, y);
+    if (politicalMap.imageData.data[en] != or || politicalMap.imageData.data[en + 1] != og || politicalMap.imageData.data[en + 2] != ob) return;
+    politicalMap.imageData.data[en] = nr;
+    politicalMap.imageData.data[en + 1] = ng;
+    politicalMap.imageData.data[en + 2] = nb;
     fill(x + 1, y, nr, ng, nb, or, og, ob);
     fill(x, y + 1, nr, ng, nb, or, og, ob);
     fill(x - 1, y, nr, ng, nb, or, og, ob);
@@ -144,14 +143,13 @@ function fill(x, y, nr, ng, nb, or, og, ob) {
 }*/
 
 function fFill(x, y, r, g, b) {
-    const [opr, opg, opb] = getColor(imgD, x, y);
+    const [opr, opg, opb] = provinceMap.getColor(x, y);
     if (opr == 0 && opg == 0 && opb == 0) return; //線を選択したら戻る
     //console.log(wmr + "," + wmg + "," + wmb);
     for (let ty = y - FILL_SIZE; ty < y + FILL_SIZE; ty++) {
         for (let tx = x - FILL_SIZE; tx < x + FILL_SIZE; tx++) {
-            const en2 = toImgDElem(tx, ty);
-            if (checkColor(imgD, tx, ty, opr, opg, opb)) {
-                setColor(wMapImg, tx, ty, r, g, b);
+            if (provinceMap.checkColor(tx, ty, opr, opg, opb)) {
+                politicalMap.setColor(tx, ty, r, g, b);
             }
         }
     }
@@ -166,7 +164,7 @@ function createCountry() {
         alert("同じ色を使用している国家が既に存在します");
         return;
     }
-    const [pr, pg, pb] = getColor(imgD, nx - mapX, ny - mapY);
+    const [pr, pg, pb] = provinceMap.getColor(nx - mapX, ny - mapY);
     if (pr == 0 && pg == 0 && pb == 0) {
         alert("国境線です");
         return;
@@ -179,12 +177,12 @@ function createCountry() {
     myCountryId = sqlRequest("SELECT countryId from country order by countryId desc limit 1")[0].countryId; //最新のidを取得
     annexProvince();
     fFill(nx - mapX, ny - mapY, r, g, b);
-    ctx.putImageData(wMapImg, mapX, mapY);
+    ctx.putImageData(politicalMap.imageData, mapX, mapY);
     selectCountry();
 }
 
 function selectCountry() {
-    let [r, g, b] = getColor(imgD, nx - mapX, ny - mapY); //選択しているプロヴィンスのRGBを取得
+    let [r, g, b] = provinceMap.getColor(nx - mapX, ny - mapY); //選択しているプロヴィンスのRGBを取得
     [r, g, b] = getOwnerRGB(r, g, b);
     const name = getOwnerName(r, g, b);
     if (name === "領有国なし") return;
@@ -194,15 +192,15 @@ function selectCountry() {
     document.getElementById("myCountryName").innerText = name;
     document.getElementById("money").innerText = getMoney(r, g, b);
     myCountryId = getCountryId(r, g, b);
-    document.getElementById("military").innerText = sqlRequest("SELECT military FROM country WHERE countryId="+myCountryId)[0].military;
-    document.getElementById("expandArmy").disabled=false;
-    document.getElementById("disarm").disabled=false;
+    document.getElementById("military").innerText = sqlRequest("SELECT military FROM country WHERE countryId=" + myCountryId)[0].military;
+    document.getElementById("expandArmy").disabled = false;
+    document.getElementById("disarm").disabled = false;
 }
 
 function annexProvince() { //選択しているマスを選択している国で併合します
     if (myCountryId == null) return;
 
-    const [pr, pg, pb] = getColor(imgD, nx - mapX, ny - mapY);
+    const [pr, pg, pb] = provinceMap.getColor(nx - mapX, ny - mapY);
     if (pr == 0 && pg == 0 && pb == 0) {
         alert("国境線です");
         return;
@@ -213,11 +211,7 @@ function annexProvince() { //選択しているマスを選択している国で
         sqlRequest("INSERT INTO `province` (`x`, `y`, `r`, `g`, `b`, `timestamp`, `countryId`) VALUES (" + (nx - mapX) + ", " + (ny - mapY) + ", " + pr + ", " + pg + ", " + pb + ", NOW(), " + myCountryId + ")");
     }
     fFill(nx - mapX, ny - mapY, myCountryColor[0], myCountryColor[1], myCountryColor[2]);
-    ctx.putImageData(wMapImg, mapX, mapY);
-}
-
-function toImgDElem(x, y) {
-    return (x + wMapImg.width * y) * 4;
+    ctx.putImageData(politicalMap.imageData, mapX, mapY);
 }
 
 function getOwnerRGB(r, g, b) { //プロヴィンスカラーから領有国カラーを求めます
@@ -250,24 +244,6 @@ function isOwned(r, g, b) {
     return true;
 }
 
-function getColor(imgD, x, y) {
-    const n = toImgDElem(x, y);
-    return [imgD.data[n], imgD.data[n + 1], imgD.data[n + 2]];
-}
-
-function checkColor(imgD, x, y, r, g, b) {
-    const n = toImgDElem(x, y);
-    return imgD.data[n] === r && imgD.data[n + 1] === g && imgD.data[n + 2] === b;
-}
-
-function setColor(ImageData, x, y, r, g, b) {
-    const n = toImgDElem(x, y);
-    ImageData.data[n] = r;
-    ImageData.data[n + 1] = g;
-    ImageData.data[n + 2] = b;
-    return;
-}
-
 function switchAnnexMode() {
     if (myCountryId == null) return; //国が未選択だったら何もしない
     annexMode = 1 - annexMode;
@@ -279,34 +255,34 @@ function switchAnnexMode() {
     document.getElementById("annex").innerText = "併合開始";
 }
 
-function expandArmy(){ //軍を拡大
-    let military=parseInt(document.getElementById("military").innerText);
-    document.getElementById("military").innerText=++military;
-    document.getElementById("disarm").disabled=false;
-    sqlRequest("UPDATE country SET timestamp=NOW(),military="+military+" WHERE countryId="+myCountryId);
+function expandArmy() { //軍を拡大
+    let military = parseInt(document.getElementById("military").innerText);
+    document.getElementById("military").innerText = ++military;
+    document.getElementById("disarm").disabled = false;
+    sqlRequest("UPDATE country SET timestamp=NOW(),military=" + military + " WHERE countryId=" + myCountryId);
 }
 
-function disarm(){ //軍縮
-    let military=parseInt(document.getElementById("military").innerText);
-    if(military<=0){
-        document.getElementById("text").innerText="これ以上軍縮はできません";
-        document.getElementById("disarm").disabled=true;
+function disarm() { //軍縮
+    let military = parseInt(document.getElementById("military").innerText);
+    if (military <= 0) {
+        document.getElementById("text").innerText = "これ以上軍縮はできません";
+        document.getElementById("disarm").disabled = true;
         return;
     }
-    document.getElementById("military").innerText=--military;
-    sqlRequest("UPDATE country SET timestamp=NOW(),military="+military+" WHERE countryId="+myCountryId);
+    document.getElementById("military").innerText = --military;
+    sqlRequest("UPDATE country SET timestamp=NOW(),military=" + military + " WHERE countryId=" + myCountryId);
 }
 
-function declareWar(){ //宣戦布告
-    if(myCountryId==null || targetCountryId==null || myCountryId==targetCountryId) return;
-    const request=sqlRequest("SELECT * FROM war WHERE ((countryIdA='"+myCountryId+"' AND countryIdB='"+targetCountryId+"') OR (countryIdA='"+targetCountryId+"'AND countryIdB='"+myCountryId+"'))");
+function declareWar() { //宣戦布告
+    if (myCountryId == null || targetCountryId == null || myCountryId == targetCountryId) return;
+    const request = sqlRequest("SELECT * FROM war WHERE ((countryIdA='" + myCountryId + "' AND countryIdB='" + targetCountryId + "') OR (countryIdA='" + targetCountryId + "'AND countryIdB='" + myCountryId + "'))");
     console.log(request);
-    if(request.length>0){
-        document.getElementById("text").innerText="すでに戦争状態です。";
+    if (request.length > 0) {
+        document.getElementById("text").innerText = "すでに戦争状態です。";
         return;
     }
-    document.getElementById("text").innerText="宣戦布告しました！";
-    sqlRequest("INSERT INTO war VALUES ("+myCountryId+","+targetCountryId+")");
+    document.getElementById("text").innerText = "宣戦布告しました！";
+    sqlRequest("INSERT INTO war VALUES (" + myCountryId + "," + targetCountryId + ")");
 }
 
 function now() { //yyyymmddhhmmss形式の現在の日付時刻を取得
@@ -366,8 +342,31 @@ function test() {
     //(Math.floor(Math.random() * 40) + 1)
 }
 
-//imageDataObjectへの各種操作を提供するクラス W.I.P.
-class ImageDataUtil {
-    constructor() {
+//imageDataObjectへの各種操作を提供するクラス
+class ImageDataController {
+    constructor(imageData = new ImageData()) {
+        this.imageData = imageData;
+
+    }
+
+    getPixelOffset(x, y) {
+        return (x + imageData.width * y) * 4;
+    }
+
+    getColor(x, y) {
+        const n = getPixelOffset(x, y);
+        return [imageData.data[n], imageData.data[n + 1], imageData.data[n + 2]];
+    }
+
+    setColor(x, y, r, g, b) {
+        const n = getPixelOffset(x, y);
+        imageData.data[n] = r;
+        imageData.data[n + 1] = g;
+        imageData.data[n + 2] = b;
+    }
+
+    checkColor(x, y, r, g, b) {
+        const n = toprovinceMap.imageDataElem(x, y);
+        return imageData.data[n] === r && imageData.data[n + 1] === g && imageData.data[n + 2] === b;
     }
 }
