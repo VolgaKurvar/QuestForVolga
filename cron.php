@@ -63,15 +63,15 @@ foreach ($result as $value) {
             $stmt = $pdo->query("DELETE FROM war WHERE countryIdA=".$value["countryIdA"]."countryIdB=."+$value["countryIdB"]);
             $stmt -> fetch(PDO::FETCH_ASSOC); //戦争を削除
         }else{ //Aが敗戦していた場合
-            $stmt = $pdo->query("INSERT INTO claim('countryIdA','countryIdB','claim') VALUES (".$value["countryIdB"].", ".$value["countryIdA"].",3)");
+            $stmt = $pdo->query("INSERT INTO 'claim'('countryIdA','countryIdB','claim') VALUES (".$value["countryIdB"].", ".$value["countryIdA"].",3)");
             $stmt -> fetch(PDO::FETCH_ASSOC); //BがAに対し3マス主張できる
             $stmt = $pdo->query("DELETE FROM war WHERE countryIdA=".$value["countryIdA"]."countryIdB=."+$value["countryIdB"]);
             $stmt -> fetch(PDO::FETCH_ASSOC); //戦争を削除
         }
     }else if($bMilitary==0){
-        $stmt = $pdo->query("INSERT INTO claim(countryIdA,countryIdB,claim) VALUES (".$value["countryIdA"].", ".$value["countryIdB"].",3)");
+        $stmt = $pdo->query("INSERT INTO claim('countryIdA','countryIdB','claim') VALUES (".$value["countryIdA"].", ".$value["countryIdB"].",3)");
         $stmt -> fetch(PDO::FETCH_ASSOC); //AがBに対し3マス主張できる
-        $stmt = $pdo->query("DELETE FROM war WHERE countryIdA=".$value["countryIdA"]."countryIdB=."+$value["countryIdB"]);
+        $stmt = $pdo->query("DELETE FROM war WHERE countryIdA=".$value["countryIdA"]." countryIdB=".$value["countryIdB"]);
         $stmt -> fetch(PDO::FETCH_ASSOC); //戦争を削除
     }
 }

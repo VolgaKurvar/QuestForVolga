@@ -57,14 +57,11 @@ onload = () => {
     function fillstart(e) {
         let [r, g, b] = provinceMap.getColor(lastX, lastY);
         console.log(r, g, b);
-        //console.log("x=" + lastX + "y=" + lastY + "pr=" + r + "pg=" + g + "pb=" + b);
         [r, g, b] = getOwnerRGB(r, g, b);
-        //console.log("x=" + lastX + "y=" + lastY + "or=" + r + "og=" + g + "ob=" + b);
         fFill(lastX, lastY, r, g, b);
         lastX = e.offsetX - mapX;
         lastY = e.offsetY - mapY;
         fFill(lastX, lastY, 255, 0, 0);
-        //console.log(getColor(provinceMap.imageData, lastX, lastY));
         ctx.putImageData(politicalMap.imageData, mapX, mapY);
         if (annexMode == 1) annexProvince();
         [r, g, b] = provinceMap.getColor(lastX, lastY);
@@ -350,23 +347,23 @@ class ImageDataController {
     }
 
     getPixelOffset(x, y) {
-        return (x + imageData.width * y) * 4;
+        return (x + this.imageData.width * y) * 4;
     }
 
     getColor(x, y) {
-        const n = getPixelOffset(x, y);
-        return [imageData.data[n], imageData.data[n + 1], imageData.data[n + 2]];
+        const n = this.getPixelOffset(x, y);
+        return [this.imageData.data[n], this.imageData.data[n + 1], this.imageData.data[n + 2]];
     }
 
     setColor(x, y, r, g, b) {
-        const n = getPixelOffset(x, y);
-        imageData.data[n] = r;
-        imageData.data[n + 1] = g;
-        imageData.data[n + 2] = b;
+        const n = this.getPixelOffset(x, y);
+        this.imageData.data[n] = r;
+        this.imageData.data[n + 1] = g;
+        this.imageData.data[n + 2] = b;
     }
 
     checkColor(x, y, r, g, b) {
-        const n = toprovinceMap.imageDataElem(x, y);
-        return imageData.data[n] === r && imageData.data[n + 1] === g && imageData.data[n + 2] === b;
+        const n = this.getPixelOffset(x, y);
+        return this.imageData.data[n] === r && this.imageData.data[n + 1] === g && this.imageData.data[n + 2] === b;
     }
 }
