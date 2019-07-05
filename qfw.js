@@ -1,5 +1,7 @@
 "use strict";
 
+import ImageDataController from "./ImageDataController.js";
+
 const FILL_SIZE = 200;
 let provinceMap = null, politicalMap = null;
 let nx = 0, ny = 0, lastX = 0, lastY = 0, mapX = -2500, mapY = -300, myCountryColor = [255, 255, 255], annexMode = 0, pLastTime = 0, cLastTime = 0, myCountryId = null, targetCountryId = null;
@@ -28,6 +30,15 @@ onload = () => {
         fFill(parseInt(i.x), parseInt(i.y), parseInt(i.r), parseInt(i.g), parseInt(i.b));
     }
     ctx.putImageData(politicalMap.imageData, mapX, mapY);
+
+    //マルチスレッド実験
+    // Workerスクリプトへのバスを引数にWorkerインスタンスを生成します
+    var worker = new Worker('worker.js');
+    // データをWorkerスレッドに送り処理を開始させます
+    worker.postMessage(politicalMap.data);
+    worker.onmessage = function (e) {
+        console.log(e);
+    };
 
     setInterval(() => {
         //地図更新
@@ -337,33 +348,4 @@ function test() {
     //UPDATE province SET countryId=2,timestamp=NOW() WHERE r=207 AND g=223 AND b=223;
     //SELECT countryId,name from country order by countryId desc limit 3
     //(Math.floor(Math.random() * 40) + 1)
-}
-
-//imageDataObjectへの各種操作を提供するクラス
-class ImageDataController {
-    constructor(imageData = new ImageData()) {
-        this.imageData = imageData;
-
-    }
-
-    getPixelOffset(x, y) {
-        return (x + this.imageData.width * y) * 4;
-    }
-
-    getColor(x, y) {
-        const n = this.getPixelOffset(x, y);
-        return [this.imageData.data[n], this.imageData.data[n + 1], this.imageData.data[n + 2]];
-    }
-
-    setColor(x, y, r, g, b) {
-        const n = this.getPixelOffset(x, y);
-        this.imageData.data[n] = r;
-        this.imageData.data[n + 1] = g;
-        this.imageData.data[n + 2] = b;
-    }
-
-    checkColor(x, y, r, g, b) {
-        const n = this.getPixelOffset(x, y);
-        return this.imageData.data[n] === r && this.imageData.data[n + 1] === g && this.imageData.data[n + 2] === b;
-    }
 }

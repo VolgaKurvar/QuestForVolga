@@ -30,11 +30,11 @@
                 <div id="text" style="height: 20%;">指令：国を選択するか、新しく国を作成してください</div>
             </div>
         </div>
-        <div style="height:1.5em;">            
+        <div style="height:1.5em;">
             <img src="img/money.png" style="height: 100%;float: left;">
             <span id="money">???</span>
-            <span>軍事力</span>                        
-            <span id="military">???</span>      
+            <span>軍事力</span>
+            <span id="military">???</span>
         </div>
     </div>
     <div style="width: 150px;float: left;">
@@ -43,7 +43,6 @@
         <button onclick="declareWar()">宣戦布告する</button>
     </div>
     <canvas id="canvas" width="800" height="450" style="background-color: beige;"></canvas>
-    <script id="js" src="qfw.js"></script>
     <br>
     <input id="color" value="#ff0000" type="color">
     <input id="mcName" type="text" value="国名">
@@ -53,6 +52,8 @@
     <button id="expandArmy" onclick="expandArmy()" disabled>軍拡する</button>
     <button id="disarm" onclick="disarm()" disabled>軍縮する</button>
     <button onclick="test()">怪しい</button>
+    <script type="module" src="qfw.js"></script>
+    <script type="module" src="worker.js"></script>
 </body>
 
 </html>
