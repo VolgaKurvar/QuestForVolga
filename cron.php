@@ -15,6 +15,7 @@ header("Content-Type: application/json; charset=utf-8");
 $result=array();
 while($row = $stmt -> fetch(PDO::FETCH_ASSOC)) {
     array_push($result,$row);
+    var_dump($row);
 }
 $newMilitarys=array();
 foreach ($result as $value) {
@@ -46,9 +47,13 @@ foreach ($result as $value) {
 foreach ($newMilitarys as $key => $value) {
     $stmt = $pdo->query("SELECT military FROM country WHERE countryId=".$key);
     $military = ($stmt -> fetch(PDO::FETCH_ASSOC))["military"];
+    print("国IDが".$key." の国の元の軍事力は".$military." で更新後は".max(0,$military+$value)." です。\n");
     $stmt = $pdo->query("UPDATE country SET military=".max(0,$military+$value)." WHERE countryId=".$key);
     $stmt -> fetch(PDO::FETCH_ASSOC);
 }
+
+$stmt = $pdo->query("SELECT * FROM claim");
+var_dump($stmt -> fetch(PDO::FETCH_ASSOC));
 
 
 //軍事力が尽きた国は敗戦とします
@@ -58,31 +63,39 @@ foreach ($result as $value) {
     $aMilitary = ($stmt -> fetch(PDO::FETCH_ASSOC))["military"];
     $stmt = $pdo->query("SELECT military FROM country WHERE countryId=".$value["countryIdB"]);
     $bMilitary = ($stmt -> fetch(PDO::FETCH_ASSOC))["military"];
+    print("AのIDは".$value["countryIdA"]."で軍事力は".$aMilitary."\n");
+    print("BのIDは".$value["countryIdB"]."で軍事力は".$bMilitary."\n");
     if($aMilitary==0){
         if($bMilitary==0){ //双方敗戦していた場合
-            $stmt = $pdo->query("DELETE FROM war WHERE countryIdA=".$value["countryIdA"]."countryIdB=."+$value["countryIdB"]);
-            $stmt -> fetch(PDO::FETCH_ASSOC); //戦争を削除
+            print("双方敗戦\n");
+            $stmt = $pdo->query("DELETE FROM war WHERE countryIdA=".$value["countryIdA"]." AND countryIdB=."+$value["countryIdB"]);//戦争を削除
+            $stmt -> fetch(PDO::FETCH_ASSOC);
         }else{ //Aが敗戦していた場合
-            $stmt = $pdo->query("INSERT INTO 'claim'('countryIdA','countryIdB','claim') VALUES (".$value["countryIdB"].", ".$value["countryIdA"].",3)");
-            $stmt -> fetch(PDO::FETCH_ASSOC); //BがAに対し3マス主張できる
-            $stmt = $pdo->query("DELETE FROM war WHERE countryIdA=".$value["countryIdA"]."countryIdB=."+$value["countryIdB"]);
-            $stmt -> fetch(PDO::FETCH_ASSOC); //戦争を削除
+            print("Aが敗戦\n");
+            print("INSERT INTO claim VALUES (".$value["countryIdB"].", ".$value["countryIdA"].",3)");
+            $stmt = $pdo->query("INSERT INTO claim VALUES (".$value["countryIdB"].",".$value["countryIdA"].",3)");//BがAに対し3マス主張できる
+            $stmt -> fetch(PDO::FETCH_ASSOC);
+            $stmt = $pdo->query("DELETE FROM war WHERE countryIdA=".$value["countryIdA"]." AND countryIdB=."+$value["countryIdB"]);//戦争を削除
+            $stmt -> fetch(PDO::FETCH_ASSOC);
         }
     }else if($bMilitary==0){
-        $stmt = $pdo->query("INSERT INTO claim('countryIdA','countryIdB','claim') VALUES (".$value["countryIdA"].", ".$value["countryIdB"].",3)");
-        $stmt -> fetch(PDO::FETCH_ASSOC); //AがBに対し3マス主張できる
-        $stmt = $pdo->query("DELETE FROM war WHERE countryIdA=".$value["countryIdA"]." countryIdB=".$value["countryIdB"]);
-        $stmt -> fetch(PDO::FETCH_ASSOC); //戦争を削除
+        print("Bが敗戦\n");
+        $stmt = $pdo->query("INSERT INTO 'claim' VALUES (".$value["countryIdA"].",".$value["countryIdB"].",3)");//AがBに対し3マス主張できる
+        $stmt -> fetch(PDO::FETCH_ASSOC);
+        $stmt = $pdo->query("DELETE FROM war WHERE countryIdA=".$value["countryIdA"]." AND countryIdB=".$value["countryIdB"]); //戦争を削除
+        $stmt -> fetch(PDO::FETCH_ASSOC);
+    }else{
+        print("戦争は継続する\n");
     }
 }
 
 //ログ
-//$stmt = $pdo->query("INSERT INTO `log`(time,text) VALUES ( NOW(), 'テストやで～')");
+//$stmt = $pdo->query("INSERT INTO `log` VALUES ( NOW(), 'テストやで～')");
 
 
 //$row2 = $stmt -> fetch(PDO::FETCH_ASSOC);
 
-//$stmt = $pdo->query("SELECT * FROM log");
+///$stmt = $pdo->query("SELECT * FROM log");
 //var_dump($stmt -> fetch(PDO::FETCH_ASSOC));
 
 //$stmt = $pdo->query("SELECT * FROM 'log'");
