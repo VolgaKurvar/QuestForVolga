@@ -1,6 +1,6 @@
 //imageDataObjectへの各種操作を提供するクラス
 
-"use strict";
+//"use strict";
 
 export default class ImageDataController {
     constructor(imageData = new ImageData()) {

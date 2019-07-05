@@ -1,6 +1,6 @@
 "use strict";
 
-import ImageDataController from "./ImageDataController.js";
+import { ImageDataController } from "./ImageDataController.js";
 
 const FILL_SIZE = 200;
 let provinceMap = null, politicalMap = null;

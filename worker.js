@@ -1,10 +1,10 @@
 // UIスレッドからのデータを取得します
 "use strict";
 
-import ImageDataController from "./ImageDataController.js";
+import * as T from "./ImageDataController.js";
 
 onmessage = function (e) {
-    console.log(e.data);
+    //console.log(e.data);
     let politicalMap = new ImageDataController(e.data);
     //let politicalMap = e.data;
     //this.console.log(e.data);
