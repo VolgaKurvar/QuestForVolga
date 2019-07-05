@@ -1,4 +1,6 @@
 <?php
+//キーの重複などでSQLエラーが出ることがある
+
 try {
     $pdo = new PDO('mysql:host=mysql1.php.xdomain.ne.jp;dbname=kurvan1112_qfv;charset=utf8','kurvan1112_db','mriz1112',
     array(PDO::ATTR_EMULATE_PREPARES => false));
@@ -12,6 +14,7 @@ $stmt = $pdo->query("UPDATE country SET money=money+(SELECT COUNT(*) FROM provin
 //戦争
 $stmt = $pdo->query("SELECT * FROM war");
 header("Content-Type: application/json; charset=utf-8");
+print("戦争の一覧：\n");
 $result=array();
 while($row = $stmt -> fetch(PDO::FETCH_ASSOC)) {
     array_push($result,$row);
@@ -52,9 +55,11 @@ foreach ($newMilitarys as $key => $value) {
     $stmt -> fetch(PDO::FETCH_ASSOC);
 }
 
+print("請求権：\n");
 $stmt = $pdo->query("SELECT * FROM claim");
-var_dump($stmt -> fetch(PDO::FETCH_ASSOC));
-
+while($row = $stmt -> fetch(PDO::FETCH_ASSOC)) {
+    var_dump($row);
+}
 
 //軍事力が尽きた国は敗戦とします
 foreach ($result as $value) {
@@ -68,20 +73,28 @@ foreach ($result as $value) {
     if($aMilitary==0){
         if($bMilitary==0){ //双方敗戦していた場合
             print("双方敗戦\n");
-            $stmt = $pdo->query("DELETE FROM war WHERE countryIdA=".$value["countryIdA"]." AND countryIdB=."+$value["countryIdB"]);//戦争を削除
+            $stmt = $pdo->query("DELETE FROM war WHERE countryIdA=".$value["countryIdA"]." AND countryIdB=".$value["countryIdB"]);//戦争を削除
             $stmt -> fetch(PDO::FETCH_ASSOC);
         }else{ //Aが敗戦していた場合
             print("Aが敗戦\n");
-            print("INSERT INTO claim VALUES (".$value["countryIdB"].", ".$value["countryIdA"].",3)");
             $stmt = $pdo->query("INSERT INTO claim VALUES (".$value["countryIdB"].",".$value["countryIdA"].",3)");//BがAに対し3マス主張できる
-            $stmt -> fetch(PDO::FETCH_ASSOC);
-            $stmt = $pdo->query("DELETE FROM war WHERE countryIdA=".$value["countryIdA"]." AND countryIdB=."+$value["countryIdB"]);//戦争を削除
+            try {                
+                $stmt -> fetch(PDO::FETCH_ASSOC);
+            } catch (\Throwable $th) {
+                print("国ID".$value["countryIdB"]."の".$value["countryIdA"]."に対する請求権の追加に失敗");
+                var_dump($pdo ->errorInfo());
+            }
+            $stmt = $pdo->query("DELETE FROM war WHERE countryIdA=".$value["countryIdA"]." AND countryIdB=".$value["countryIdB"]);//戦争を削除
             $stmt -> fetch(PDO::FETCH_ASSOC);
         }
     }else if($bMilitary==0){
         print("Bが敗戦\n");
         $stmt = $pdo->query("INSERT INTO 'claim' VALUES (".$value["countryIdA"].",".$value["countryIdB"].",3)");//AがBに対し3マス主張できる
-        $stmt -> fetch(PDO::FETCH_ASSOC);
+        try {
+            $stmt -> fetch(PDO::FETCH_ASSOC);
+        } catch (\Throwable $th) {
+            var_dump($pdo ->errorInfo());
+        }    
         $stmt = $pdo->query("DELETE FROM war WHERE countryIdA=".$value["countryIdA"]." AND countryIdB=".$value["countryIdB"]); //戦争を削除
         $stmt -> fetch(PDO::FETCH_ASSOC);
     }else{
