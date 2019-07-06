@@ -14,47 +14,58 @@
 </head>
 
 <body
-    style="background-color: orange;margin: 0px !important;margin-left: 200px !important;margin-right: 200px !important;">
-    <h1>Quest for Volga</h1>
-    <h2>ゲームの説明</h2>
-    <p>オンライン対戦国とりゲームだよ！自分の国を作って世界を征服しよう！画面に表示される指令をクリアしよう！
-        現在まったりと制作中です。</p>
-    <hr>
-    <img id="map" style="display: none" src="map.png">
-    <img id="whiteMap" style="display: none" src="whiteMap.png">
-    <div>
-        <div style="height: 100px;">
-            <img id="myCountryFlag" style="height: 100px;float: left;">
-            <div style="height: 100%">
-                <div id="myCountryName" style="height: 80%;font-size: 64px;">未選択</div>
-                <div id="text" style="height: 20%;">指令：国を選択するか、新しく国を作成してください</div>
+    style="background-color: orange;margin: 0px !important;margin-left: 200px !important;margin-right: 200px !important;height: 100%;">
+    <div id="header">
+        <h1>Quest for Volga</h1>
+        <h2>ゲームの説明</h2>
+        <p>オンライン対戦国とりゲームだよ！自分の国を作って世界を征服しよう！画面に表示される指令をクリアしよう！
+            現在まったりと制作中です。</p>
+        <hr>
+        <img id="map" style="display: none" src="map.png">
+        <img id="whiteMap" style="display: none" src="whiteMap.png">
+    </div>
+    <div id="middle" style="width:100%;">
+        <div>
+            <div style="height: 100px;">
+                <img id="myCountryFlag" style="height: 100px;float: left;" src="img/255.255.255.png">
+                <div style="height: 100%">
+                    <div id="myCountryName" style="height: 80%;font-size: 64px;">未選択</div>
+                    <div id="text" style="height: 20%;">指令：国を選択するか、新しく国を作成してください</div>
+                </div>
+            </div>
+            <div style="height:1.5em;">
+                <img src="img/money.png" style="height: 100%;float: left;">
+                <span id="money">???</span>
+                <span>軍事力</span>
+                <span id="military">???</span>
             </div>
         </div>
-        <div style="height:1.5em;">
-            <img src="img/money.png" style="height: 100%;float: left;">
-            <span id="money">???</span>
-            <span>軍事力</span>
-            <span id="military">???</span>
+        <div style="width: 10%;float: left;">
+            <img id="targetCountryFlag" width="100%" src="img/255.255.255.png">
+            <div id="targetCountryName" style="width:100%;height: 1.5em"></div>
+            <div style="width: 100%;height:1.5em">
+                <img src="img/money.png" style="height: 100%;float: left;">
+                <span id="targetMoney">???</span>
+            </div>
+            <div style="width: 100%;height:1.5em">
+                <span>軍事力</span>
+                <span id="targetMilitary">???</span>
+            </div>
+            <button onclick="declareWar()">宣戦布告する</button>
         </div>
+        <canvas id="canvas" width="800" height="450" style="background-color: beige;"></canvas>
+        <br>
+        <input id="color" value="#ff0000" type="color">
+        <input id="mcName" type="text" value="国名">
+        <button type="submit" onclick="createCountry()">建国する！</button>
+        <button onclick="selectCountry()">国を選択</button>
+        <button id="annex" onclick="switchAnnexMode()">併合開始</button>
+        <button id="expandArmy" onclick="expandArmy()" disabled>軍拡する</button>
+        <button id="disarm" onclick="disarm()" disabled>軍縮する</button>
+        <button onclick="test()">怪しい</button>
     </div>
-    <div style="width: 150px;float: left;">
-        <img id="targetCountryFlag" width="100%">
-        <div id="targetCountryName" style="width:100%"></div>
-        <button onclick="declareWar()">宣戦布告する</button>
-    </div>
-    <canvas id="canvas" width="800" height="450" style="background-color: beige;"></canvas>
-    <br>
-    <input id="color" value="#ff0000" type="color">
-    <input id="mcName" type="text" value="国名">
-    <button type="submit" onclick="createCountry()">建国する！</button>
-    <button onclick="selectCountry()">国を選択</button>
-    <button id="annex" onclick="switchAnnexMode()">併合開始</button>
-    <button id="expandArmy" onclick="expandArmy()" disabled>軍拡する</button>
-    <button id="disarm" onclick="disarm()" disabled>軍縮する</button>
-    <button onclick="test()">怪しい</button>
-    <script type="module" src="qfw.js"></script>
-    <script type="module" src="worker.js"></script>
-    <script src="ImageDataController.js"></script>
+    <script src="qfw.js"></script>
+
 </body>
 
 </html>

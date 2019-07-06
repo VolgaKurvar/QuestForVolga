@@ -1,44 +1,46 @@
 "use strict";
 
-import { ImageDataController } from "./ImageDataController.js";
-
-const FILL_SIZE = 200;
+const FILL_SIZE = 150;
 let provinceMap = null, politicalMap = null;
 let nx = 0, ny = 0, lastX = 0, lastY = 0, mapX = -2500, mapY = -300, myCountryColor = [255, 255, 255], annexMode = 0, pLastTime = 0, cLastTime = 0, myCountryId = null, targetCountryId = null;
 
 onload = () => {
+    //canvas初期化
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext('2d');
     const map = document.getElementById("map");
     canvas.width = map.width;
     canvas.height = map.height;
+
+    //プロヴィンスマップと白地図を取得
     ctx.drawImage(map, 0, 0, map.width, map.height);
     provinceMap = new ImageDataController(ctx.getImageData(0, 0, map.width, map.height));
     ctx.drawImage(document.getElementById("whiteMap"), 0, 0, map.width, map.height);
     politicalMap = new ImageDataController(ctx.getImageData(0, 0, map.width, map.height));
-    canvas.width = 960;
+
+    //ウィンドウ幅の7割を地図表示領域とする
+    canvas.width = Math.round(window.innerWidth * 0.7);
     canvas.height = 540;
     canvas.addEventListener("click", fillstart, false);
     canvas.addEventListener("mousedown", mdown, false);
     canvas.addEventListener("touchstart", mdown, false);
     document.getElementById("color").value = "#" + Math.floor(Math.random() * 256).toString(16) + Math.floor(Math.random() * 256).toString(16) + Math.floor(Math.random() * 256).toString(16);
 
-    //地図初期化
+    //UIのサイズ調整
+    {
+        const targetCountryFlag = document.getElementById("targetCountryFlag");
+        targetCountryFlag.height = Math.round(targetCountryFlag.width * 0.67); //横：縦=3:2
+        document.getElementById("middle").style.height = window.innerHeight - document.getElementById("header").offsetHeight + "px"; //ミドルを可能な限り縦に伸ばす
+    }
+
+    //地図生成
     pLastTime = now();
     cLastTime = now();
     for (const i of sqlRequest("SELECT x,y,country.r,country.g,country.b FROM province INNER JOIN country ON province.countryId=country.countryId")) {
-        fFill(parseInt(i.x), parseInt(i.y), parseInt(i.r), parseInt(i.g), parseInt(i.b));
+        politicalMap.fill(provinceMap, parseInt(i.x), parseInt(i.y), parseInt(i.r), parseInt(i.g), parseInt(i.b));
     }
+    //storage["politicalMapImageData"] = JSON.stringify(politicalMap.imageData);
     ctx.putImageData(politicalMap.imageData, mapX, mapY);
-
-    //マルチスレッド実験
-    // Workerスクリプトへのバスを引数にWorkerインスタンスを生成します
-    var worker = new Worker('worker.js');
-    // データをWorkerスレッドに送り処理を開始させます
-    worker.postMessage(politicalMap.data);
-    worker.onmessage = function (e) {
-        console.log(e);
-    };
 
     setInterval(() => {
         //地図更新
@@ -47,7 +49,7 @@ onload = () => {
             if (responce.length > -1) pLastTime = now(); //responceと無理やり同期させる
             console.log(responce);
             for (const i of responce) {
-                fFill(parseInt(i.x), parseInt(i.y), parseInt(i.r), parseInt(i.g), parseInt(i.b));
+                politicalMap.fill(provinceMap, parseInt(i.x), parseInt(i.y), parseInt(i.r), parseInt(i.g), parseInt(i.b));
             }
             ctx.putImageData(politicalMap.imageData, mapX, mapY);
         }
@@ -62,17 +64,17 @@ onload = () => {
                 document.getElementById("money").innerText = i.money;
             }
         }
-    }, 1500);
+    }, 3000);
 
 
     function fillstart(e) {
         let [r, g, b] = provinceMap.getColor(lastX, lastY);
         console.log(r, g, b);
         [r, g, b] = getOwnerRGB(r, g, b);
-        fFill(lastX, lastY, r, g, b);
+        politicalMap.fill(provinceMap, lastX, lastY, r, g, b);
         lastX = e.offsetX - mapX;
         lastY = e.offsetY - mapY;
-        fFill(lastX, lastY, 255, 0, 0);
+        politicalMap.fill(provinceMap, lastX, lastY, 255, 0, 0);
         ctx.putImageData(politicalMap.imageData, mapX, mapY);
         if (annexMode == 1) annexProvince();
         [r, g, b] = provinceMap.getColor(lastX, lastY);
@@ -80,6 +82,9 @@ onload = () => {
         document.getElementById("targetCountryFlag").src = "img/" + r + "." + g + "." + b + ".png";
         document.getElementById("targetCountryName").innerText = getOwnerName(r, g, b);
         targetCountryId = getCountryId(r, g, b);
+        const targetCountryInfo = getCountryInfo(targetCountryId);
+        document.getElementById("targetMoney").innerText = targetCountryInfo.money;
+        document.getElementById("targetMilitary").innerText = targetCountryInfo.military;
     }
 
     function mdown(e) {
@@ -136,33 +141,6 @@ onload = () => {
     }
 }
 
-//古い関数です スタックオーバーフローします
-/*
-function fill(x, y, nr, ng, nb, or, og, ob) {
-    const en = toprovinceMap.imageDataElem(x, y);
-    if (politicalMap.imageData.data[en] != or || politicalMap.imageData.data[en + 1] != og || politicalMap.imageData.data[en + 2] != ob) return;
-    politicalMap.imageData.data[en] = nr;
-    politicalMap.imageData.data[en + 1] = ng;
-    politicalMap.imageData.data[en + 2] = nb;
-    fill(x + 1, y, nr, ng, nb, or, og, ob);
-    fill(x, y + 1, nr, ng, nb, or, og, ob);
-    fill(x - 1, y, nr, ng, nb, or, og, ob);
-    fill(x, y - 1, nr, ng, nb, or, og, ob);
-}*/
-
-function fFill(x, y, r, g, b) {
-    const [opr, opg, opb] = provinceMap.getColor(x, y);
-    if (opr == 0 && opg == 0 && opb == 0) return; //線を選択したら戻る
-    //console.log(wmr + "," + wmg + "," + wmb);
-    for (let ty = y - FILL_SIZE; ty < y + FILL_SIZE; ty++) {
-        for (let tx = x - FILL_SIZE; tx < x + FILL_SIZE; tx++) {
-            if (provinceMap.checkColor(tx, ty, opr, opg, opb)) {
-                politicalMap.setColor(tx, ty, r, g, b);
-            }
-        }
-    }
-}
-
 function createCountry() {
     const color = document.getElementById("color").value;
     const r = parseInt(color.substring(1, 3), 16);
@@ -184,7 +162,7 @@ function createCountry() {
     sqlRequest("INSERT INTO `country` (`name`, `r`, `g`, `b`, `money`, `timestamp`) VALUES ('" + document.getElementById("mcName").value + "', " + r + ", " + g + ", " + b + " , 0, NOW())");
     myCountryId = sqlRequest("SELECT countryId from country order by countryId desc limit 1")[0].countryId; //最新のidを取得
     annexProvince();
-    fFill(nx - mapX, ny - mapY, r, g, b);
+    politicalMap.fill(provinceMap, nx - mapX, ny - mapY, r, g, b);
     ctx.putImageData(politicalMap.imageData, mapX, mapY);
     selectCountry();
 }
@@ -218,7 +196,7 @@ function annexProvince() { //選択しているマスを選択している国で
     } else {
         sqlRequest("INSERT INTO `province` (`x`, `y`, `r`, `g`, `b`, `timestamp`, `countryId`) VALUES (" + (nx - mapX) + ", " + (ny - mapY) + ", " + pr + ", " + pg + ", " + pb + ", NOW(), " + myCountryId + ")");
     }
-    fFill(nx - mapX, ny - mapY, myCountryColor[0], myCountryColor[1], myCountryColor[2]);
+    politicalMap.fill(provinceMap, nx - mapX, ny - mapY, myCountryColor[0], myCountryColor[1], myCountryColor[2]);
     ctx.putImageData(politicalMap.imageData, mapX, mapY);
 }
 
@@ -238,6 +216,12 @@ function getMoney(r, g, b) { //国カラーから資金を求めます
     const responce = sqlRequest("SELECT money FROM country WHERE r=" + r + " AND g=" + g + " AND b=" + b);
     if (responce.length < 1) return "不明"; //国が見つからなかった時
     return parseInt(responce[0].money);
+}
+
+function getCountryInfo(countryId) {//国IDから各種情報を求めます
+    const responce = sqlRequest("SELECT * FROM country WHERE countryId=" + countryId);
+    if (responce.length < 1) return "不明"; //国が見つからなかった時
+    return responce[0];
 }
 
 function getCountryId(r, g, b) { //国カラーから国IDを求めます
@@ -342,10 +326,50 @@ function sqlRequest(state = "") {
 }
 
 function test() {
-    console.log(sqlRequest("SELECT * FROM war"));
+    localStorage.clear();
+    //console.log(sqlRequest("SELECT * FROM war"));
     //最新のプロヴィンス情報を取得↓
     //SELECT * FROM province ORDER BY timestamp desc limit 3;
     //UPDATE province SET countryId=2,timestamp=NOW() WHERE r=207 AND g=223 AND b=223;
     //SELECT countryId,name from country order by countryId desc limit 3
     //(Math.floor(Math.random() * 40) + 1)
+}
+
+class ImageDataController {
+    constructor(imageData = new ImageData()) {
+        this.imageData = imageData;
+    }
+
+    getPixelOffset(x, y) { //座標からデータが格納されている番号を取得します
+        return (x + this.imageData.width * y) * 4;
+    }
+
+    getColor(x, y) { //座標からピクセルの色を取得します
+        const n = this.getPixelOffset(x, y);
+        return [this.imageData.data[n], this.imageData.data[n + 1], this.imageData.data[n + 2]];
+    }
+
+    setColor(x, y, r, g, b) { //座標に色を設定します
+        const n = this.getPixelOffset(x, y);
+        this.imageData.data[n] = r;
+        this.imageData.data[n + 1] = g;
+        this.imageData.data[n + 2] = b;
+    }
+
+    checkColor(x, y, r, g, b) { //座標が指定された色か確認します
+        const n = this.getPixelOffset(x, y);
+        return this.imageData.data[n] === r && this.imageData.data[n + 1] === g && this.imageData.data[n + 2] === b;
+    }
+
+    fill(reference, centerX, centerY, r, g, b) {
+        if (this.checkColor(centerX, centerY, r, g, b) || this.checkColor(centerX, centerY, 0, 0, 0)) return; //既に塗られているか、線を選択したら戻る
+        const [startPixelR, startPixelG, startPixelB] = reference.getColor(centerX, centerY);
+        for (let y = centerY - FILL_SIZE; y < centerY + FILL_SIZE; y++) {
+            for (let x = centerX - FILL_SIZE; x < centerX + FILL_SIZE; x++) {
+                if (reference.checkColor(x, y, startPixelR, startPixelG, startPixelB)) {
+                    this.setColor(x, y, r, g, b);
+                }
+            }
+        }
+    }
 }
