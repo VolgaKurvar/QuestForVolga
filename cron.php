@@ -102,15 +102,4 @@ foreach ($result as $value) {
     }
 }
 
-//ログ
-//$stmt = $pdo->query("INSERT INTO `log` VALUES ( NOW(), 'テストやで～')");
-
-
-//$row2 = $stmt -> fetch(PDO::FETCH_ASSOC);
-
-///$stmt = $pdo->query("SELECT * FROM log");
-//var_dump($stmt -> fetch(PDO::FETCH_ASSOC));
-
-//$stmt = $pdo->query("SELECT * FROM 'log'");
-//var_dump($stmt -> fetch(PDO::FETCH_ASSOC));
 ?>
