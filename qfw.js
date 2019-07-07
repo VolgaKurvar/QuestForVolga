@@ -70,17 +70,17 @@ onload = () => {
     function fillstart(e) {
         let [r, g, b] = provinceMap.getColor(lastX, lastY);
         console.log(r, g, b);
-        [r, g, b] = getOwnerRGB(r, g, b);
-        politicalMap.fill(provinceMap, lastX, lastY, r, g, b);
+        let owner = getOwner(r, g, b);
+        if (owner !== null) politicalMap.fill(provinceMap, lastX, lastY, owner.r, owner.g, owner.b);
         lastX = e.offsetX - mapX;
         lastY = e.offsetY - mapY;
-        politicalMap.fill(provinceMap, lastX, lastY, 255, 0, 0);
+        politicalMap.fill(provinceMap, lastX, lastY, 255, 0, 0); //マスを赤く塗る
         ctx.putImageData(politicalMap.imageData, mapX, mapY);
         if (annexMode == 1) annexProvince();
 
         //選択しているマスの情報を表示する
         [r, g, b] = provinceMap.getColor(lastX, lastY);
-        const owner = getOwner(r, g, b);
+        owner = getOwner(r, g, b);
         targetCountryId = owner.countryId;
         document.getElementById("targetCountryFlag").src = "img/" + owner.r + "." + owner.g + "." + owner.b + ".png";
         document.getElementById("targetCountryName").innerText = owner.name;
@@ -201,27 +201,15 @@ function annexProvince() { //選択しているマスを選択している国で
     ctx.putImageData(politicalMap.imageData, mapX, mapY);
 }
 
-function getOwnerRGB(r, g, b) { //プロヴィンスカラーから領有国カラーを求めます
-    const responce = sqlRequest("SELECT r,g,b FROM country WHERE countryId=(SELECT countryId FROM province WHERE r=" + r + " AND g=" + g + " AND b=" + b + ")");
-    if (responce.length < 1) return [255, 255, 255]; //国が見つからなかった時
-    return [responce[0].r, responce[0].g, responce[0].b];
-}
-
-function getCountryInfo(countryId) {//国IDから各種情報を求めます
-    const responce = sqlRequest("SELECT * FROM country WHERE countryId=" + countryId);
-    if (responce.length < 1) return "不明"; //国が見つからなかった時
-    return responce[0];
-}
-
-function getOwner(r, g, b) {
+function getOwner(r, g, b) { //プロヴィンスのRGBから領有国情報を取得します
     const responce = sqlRequest("SELECT * FROM country WHERE countryId=(SELECT countryId FROM province WHERE r=" + r + " AND g=" + g + " AND b=" + b + ")");
     if (responce.length < 1) return null; //国が見つからなかった時
     return responce[0];
 }
 
 function isOwned(r, g, b) {
-    const [or, og, ob] = getOwnerRGB(r, g, b);
-    if (or == 255, og == 255, ob == 255) return false;
+    const owner = getOwner(r, g, b);
+    if (owner.r == 255, owner.g == 255, owner.b == 255) return false;
     return true;
 }
 
