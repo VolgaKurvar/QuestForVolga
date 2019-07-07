@@ -3,7 +3,6 @@
 const FILL_SIZE = 150;
 let provinceMap = null, politicalMap = null;
 let nx = 0, ny = 0, lastX = 0, lastY = 0, mapX = -2500, mapY = -300, myCountryColor = [255, 255, 255], annexMode = 0, pLastTime = 0, cLastTime = 0, myCountryId = null, targetCountryId = null;
-let isMouse = true;
 
 onload = () => {
     //canvas初期化
@@ -22,8 +21,9 @@ onload = () => {
     //ウィンドウ幅の7割を地図表示領域とする
     canvas.width = Math.round(document.getElementById("middle").offsetWidth * 0.9);
     canvas.height = 540;
-    document.addEventListener("mousemove", identfyDeviceType);
-    document.addEventListener("touchstart", identfyDeviceType);
+    //document.addEventListener("mousemove", identfyDeviceType);
+    //document.addEventListener("touchstart", identfyDeviceType);
+    const canvasDC = new DragController(canvas, fillstart2, moveMap);
     document.getElementById("color").value = "#" + Math.floor(Math.random() * 256).toString(16) + Math.floor(Math.random() * 256).toString(16) + Math.floor(Math.random() * 256).toString(16);
 
     //UIのサイズ調整
@@ -65,12 +65,18 @@ onload = () => {
         }
     }, 3000);
 
-    function identfyDeviceType(e) {
-        isMouse = e.changedTouches ? false : true;
-        document.removeEventListener("mousemove", identfyDeviceType);
-        document.removeEventListener("touchstart", identfyDeviceType);
-        canvas.addEventListener("mousedown", mdown, false);
-        canvas.addEventListener("touchstart", mdown, false);
+    function moveMap() {
+        mapX += canvasDC.latestMouseX - canvasDC.oldMouseX;
+        mapY += canvasDC.latestMouseY - canvasDC.oldMouseY;
+        if (mapX > 0) mapX = 0;
+        else if (mapX - canvas.width < -1 * map.width) mapX = -1 * map.width + canvas.width;
+        if (mapY > 0) mapY = 0;
+        else if (mapY - canvas.height < -1 * map.height) mapY = -1 * map.height + canvas.height;
+        ctx.putImageData(politicalMap.imageData, mapX, mapY);
+    }
+
+    function fillstart2() {
+        fillstart(canvasDC.startMouseX - canvas.offsetLeft, canvasDC.startMouseY - canvas.offsetTop);
     }
 
     function fillstart(mouseX, mouseY) {
@@ -106,58 +112,6 @@ onload = () => {
         document.getElementById("targetMilitary").innerText = owner.military;
         if (myCountryId !== null && myCountryId !== targetCountryId) document.getElementById("declareWar").disabled = false;
     }
-
-    function mdown(e) {
-        e.preventDefault();
-        if (e.type !== "mousedown") e = e.changedTouches[0];
-        const mouseX = Math.round(e.pageX);
-        const mouseY = Math.round(e.pageY);
-        fillstart(mouseX - canvas.offsetLeft, mouseY - canvas.offsetTop);
-
-        //要素内の相対座標を取得
-        nx = mouseX;
-        ny = mouseY;
-
-        //ムーブイベントにコールバック
-        canvas.addEventListener("mousemove", mmove, false);
-        canvas.addEventListener("touchmove", mmove, false);
-        canvas.addEventListener("mouseup", mup, false);
-        canvas.addEventListener("touchend", mup, false);
-        canvas.addEventListener("mouseleave", mup, false);
-        canvas.addEventListener("touchcancel", mup, false);
-    }
-
-    //マウスカーソルが動いたときに発火
-    function mmove(e) {
-        e.preventDefault();
-        if (e.type !== "mousemove") e = e.changedTouches[0];
-        const mouseX = Math.round(e.pageX);
-        const mouseY = Math.round(e.pageY);
-
-        //マウスが動いた場所に要素を動かす
-        mapX += mouseX - nx;
-        mapY += mouseY - ny;
-        if (mapX > 0) mapX = 0;
-        else if (mapX - canvas.width < -1 * map.width) mapX = -1 * map.width + canvas.width;
-        if (mapY > 0) mapY = 0;
-        else if (mapY - canvas.height < -1 * map.height) mapY = -1 * map.height + canvas.height;
-        ctx.putImageData(politicalMap.imageData, mapX, mapY);
-        nx = mouseX;
-        ny = mouseY;
-    }
-
-    //マウスボタンが上がったら発火
-    function mup(e) {
-        e.preventDefault();
-        document.getElementById("text").innerText = e.type;
-        //ムーブベントハンドラの消去
-        canvas.removeEventListener("mousemove", mmove, false);
-        canvas.removeEventListener("touchmove", mmove, false);
-        canvas.removeEventListener("mouseup", mup, false);
-        canvas.removeEventListener("touchend", mup, false);
-        canvas.removeEventListener("mouseleave", mup, false);
-        canvas.removeEventListener("touchcancel", mup, false);
-    }
 }
 
 function createCountry() {
@@ -187,8 +141,9 @@ function createCountry() {
 }
 
 function selectCountry() {
-    let [r, g, b] = provinceMap.getColor(nx - mapX, ny - mapY); //選択しているプロヴィンスのRGBを取得
+    let [r, g, b] = provinceMap.getColor(lastX, lastY); //選択しているプロヴィンスのRGBを取得
     const owner = getOwner(r, g, b);
+    console.log(owner);
     if (owner === null) return; //領有国情報が見つからなかったらreturn
 
     document.getElementById("text").innerText = "外交の時間だ！"
@@ -368,5 +323,67 @@ class ImageDataController {
                 }
             }
         }
+    }
+}
+
+//ドラッグ操作を提供するクラス
+class DragController {
+    //element:ドラッグ管理対象のエレメント
+    //startFunc:クリック時に実行する関数
+    //dragFunc:ドラッグ時に実行する関数
+    //startMouseX,startMouseY:ドラッグ開始時のマウス座標
+    //latestMouseX,latestMouseY:最新のマウス座標
+    //oldMouseX,oldMouseY:ドラッグイベント1つ前のマウス座標
+    //isDragging
+    constructor(element, startFunc = () => { }, dragFunc = () => { }) {
+        this.element = element;
+        this.startFunc = startFunc;
+        this.dragFunc = dragFunc;
+        element.addEventListener("mousedown", this.start.bind(this));
+        element.addEventListener("touchstart", this.start.bind(this));
+        self = this;
+    }
+
+    start(e) {
+        e.preventDefault();
+        if (e.type !== "mousedown") e = e.changedTouches[0];
+        this.startMouseX = Math.round(e.pageX);
+        this.startMouseY = Math.round(e.pageY);
+        this.oldMouseX = this.startMouseX;
+        this.oldMouseY = this.startMouseY;
+        this.latestMouseX = this.startMouseX;
+        this.latestMouseY = this.startMouseY;
+        this.isDragging = true;
+
+        this.element.addEventListener("mousemove", this.drag);
+        this.element.addEventListener("touchmove", this.drag);
+        this.element.addEventListener("mouseup", this.end.bind(this));
+        this.element.addEventListener("touchend", this.end.bind(this));
+        this.element.addEventListener("mouseleave", this.end.bind(this));
+        this.element.addEventListener("touchcancel", this.end.bind(this));
+
+        this.startFunc();
+    }
+
+    drag(e) {
+        if (!self.isDragging) return;
+        e.preventDefault();
+        if (e.type !== "mousemove") e = e.changedTouches[0];
+        self.latestMouseX = Math.round(e.pageX);
+        self.latestMouseY = Math.round(e.pageY);
+        self.dragFunc();
+        self.oldMouseX = self.latestMouseX;
+        self.oldMouseY = self.latestMouseY;
+    }
+
+    end(e) {
+        e.preventDefault();
+        this.isDragging = false;
+        this.element.removeEventListener("mousemove", this.drag.bind(this));
+        this.element.removeEventListener("touchmove", this.drag.bind(this));
+        this.element.removeEventListener("mouseup", this.end);
+        this.element.removeEventListener("touchend", this.end);
+        this.element.removeEventListener("mouseleave", this.end);
+        this.element.removeEventListener("touchcancel", this.end);
     }
 }
