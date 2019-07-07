@@ -77,14 +77,15 @@ onload = () => {
         politicalMap.fill(provinceMap, lastX, lastY, 255, 0, 0);
         ctx.putImageData(politicalMap.imageData, mapX, mapY);
         if (annexMode == 1) annexProvince();
+
+        //選択しているマスの情報を表示する
         [r, g, b] = provinceMap.getColor(lastX, lastY);
-        [r, g, b] = getOwnerRGB(r, g, b);
-        document.getElementById("targetCountryFlag").src = "img/" + r + "." + g + "." + b + ".png";
-        document.getElementById("targetCountryName").innerText = getOwnerName(r, g, b);
-        targetCountryId = getCountryId(r, g, b);
-        const targetCountryInfo = getCountryInfo(targetCountryId);
-        document.getElementById("targetMoney").innerText = targetCountryInfo.money;
-        document.getElementById("targetMilitary").innerText = targetCountryInfo.military;
+        const owner = getOwner(r, g, b);
+        targetCountryId = owner.countryId;
+        document.getElementById("targetCountryFlag").src = "img/" + owner.r + "." + owner.g + "." + owner.b + ".png";
+        document.getElementById("targetCountryName").innerText = owner.name;
+        document.getElementById("targetMoney").innerText = owner.money;
+        document.getElementById("targetMilitary").innerText = owner.military;
     }
 
     function mdown(e) {
@@ -169,16 +170,16 @@ function createCountry() {
 
 function selectCountry() {
     let [r, g, b] = provinceMap.getColor(nx - mapX, ny - mapY); //選択しているプロヴィンスのRGBを取得
-    [r, g, b] = getOwnerRGB(r, g, b);
-    const name = getOwnerName(r, g, b);
-    if (name === "領有国なし") return;
+    const owner = getOwner(r, g, b);
+    if (owner === null) return; //領有国情報が見つからなかったらreturn
+
     document.getElementById("text").innerText = "外交の時間だ！"
-    document.getElementById("myCountryFlag").src = "img/" + r + "." + g + "." + b + ".png";
-    myCountryColor = [r, g, b];
-    document.getElementById("myCountryName").innerText = name;
-    document.getElementById("money").innerText = getMoney(r, g, b);
-    myCountryId = getCountryId(r, g, b);
-    document.getElementById("military").innerText = sqlRequest("SELECT military FROM country WHERE countryId=" + myCountryId)[0].military;
+    myCountryId = owner.countryId;
+    myCountryColor = [owner.r, owner.g, owner.b];
+    document.getElementById("myCountryFlag").src = "img/" + owner.r + "." + owner.g + "." + owner.b + ".png";
+    document.getElementById("myCountryName").innerText = owner.name;
+    document.getElementById("money").innerText = owner.money;
+    document.getElementById("military").innerText = owner.military;
     document.getElementById("expandArmy").disabled = false;
     document.getElementById("disarm").disabled = false;
 }
@@ -228,6 +229,12 @@ function getCountryId(r, g, b) { //国カラーから国IDを求めます
     const responce = sqlRequest("SELECT countryId FROM country WHERE r=" + r + " AND g=" + g + " AND b=" + b);
     if (responce.length < 1) return null; //国が見つからなかった時
     return parseInt(responce[0].countryId);
+}
+
+function getOwner(r, g, b) {
+    const responce = sqlRequest("SELECT * FROM country WHERE countryId=(SELECT countryId FROM province WHERE r=" + r + " AND g=" + g + " AND b=" + b + ")");
+    if (responce.length < 1) return null; //国が見つからなかった時
+    return responce[0];
 }
 
 function isOwned(r, g, b) {
