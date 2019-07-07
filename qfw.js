@@ -207,28 +207,10 @@ function getOwnerRGB(r, g, b) { //プロヴィンスカラーから領有国カ�
     return [responce[0].r, responce[0].g, responce[0].b];
 }
 
-function getOwnerName(r, g, b) { //国カラーから領有国名を求めます
-    const responce = sqlRequest("SELECT name FROM country WHERE r=" + r + " AND g=" + g + " AND b=" + b);
-    if (responce.length < 1) return "領有国なし"; //国が見つからなかった時
-    return responce[0].name;
-}
-
-function getMoney(r, g, b) { //国カラーから資金を求めます
-    const responce = sqlRequest("SELECT money FROM country WHERE r=" + r + " AND g=" + g + " AND b=" + b);
-    if (responce.length < 1) return "不明"; //国が見つからなかった時
-    return parseInt(responce[0].money);
-}
-
 function getCountryInfo(countryId) {//国IDから各種情報を求めます
     const responce = sqlRequest("SELECT * FROM country WHERE countryId=" + countryId);
     if (responce.length < 1) return "不明"; //国が見つからなかった時
     return responce[0];
-}
-
-function getCountryId(r, g, b) { //国カラーから国IDを求めます
-    const responce = sqlRequest("SELECT countryId FROM country WHERE r=" + r + " AND g=" + g + " AND b=" + b);
-    if (responce.length < 1) return null; //国が見つからなかった時
-    return parseInt(responce[0].countryId);
 }
 
 function getOwner(r, g, b) {
