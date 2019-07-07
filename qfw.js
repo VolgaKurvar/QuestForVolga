@@ -19,11 +19,10 @@ onload = () => {
     politicalMap = new ImageDataController(ctx.getImageData(0, 0, map.width, map.height));
 
     //ウィンドウ幅の7割を地図表示領域とする
-    canvas.width = Math.round(window.innerWidth * 0.7);
+    canvas.width = Math.round(document.getElementById("middle").offsetWidth * 0.9);
     canvas.height = 540;
-    canvas.addEventListener("click", fillstart, false);
     canvas.addEventListener("mousedown", mdown, false);
-    canvas.addEventListener("touchstart", mdown, false);
+    //canvas.addEventListener("touchstart", mdown, false);
     document.getElementById("color").value = "#" + Math.floor(Math.random() * 256).toString(16) + Math.floor(Math.random() * 256).toString(16) + Math.floor(Math.random() * 256).toString(16);
 
     //UIのサイズ調整
@@ -79,6 +78,9 @@ onload = () => {
         ctx.putImageData(politicalMap.imageData, mapX, mapY);
         if (annexMode == 1) annexProvince();
 
+        //宣戦布告ボタンを一度無効にする
+        document.getElementById("declareWar").disabled = true;
+
         //選択しているマスの情報を表示する
         [r, g, b] = provinceMap.getColor(lastX, lastY);
         owner = getOwner(r, g, b);
@@ -95,15 +97,16 @@ onload = () => {
         document.getElementById("targetCountryName").innerText = owner.name;
         document.getElementById("targetMoney").innerText = owner.money;
         document.getElementById("targetMilitary").innerText = owner.military;
+        if (myCountryId !== null && myCountryId !== targetCountryId) document.getElementById("declareWar").disabled = false;
     }
 
     function mdown(e) {
-        /*
-        if (e.type === "mousedown") {
-            var event = e;
-        } else {
-            var event = e.changedTouches[0];
-        }*/
+        document.getElementById("text").innerText = e.type;
+        //if (e.type === "mousedown") {
+        var event = e;
+        // } else {
+        //    var event = e.changedTouches[0];
+        //}
 
         //要素内の相対座標を取得
         nx = event.offsetX;
@@ -111,24 +114,23 @@ onload = () => {
 
         //ムーブイベントにコールバック
         document.body.addEventListener("mousemove", mmove, false);
-        document.body.addEventListener("touchmove", mmove, false);
+        //document.body.addEventListener("touchmove", mmove, false);
         canvas.addEventListener("mouseup", mup, false);
+        //canvas.addEventListener("touchend", mup, false);
         document.body.addEventListener("mouseleave", mup, false);
-        canvas.addEventListener("touchend", mup, false);
-        document.body.addEventListener("touchleave", mup, false);
+        //ocument.body.addEventListener("touchleave", mup, false);
+        fillstart(event);
     }
 
     //マウスカーソルが動いたときに発火
     function mmove(e) {
+        document.getElementById("text").innerText = e.type;
         //同様にマウスとタッチの差異を吸収
-        if (e.type === "mousemove") {
-            var event = e;
-        } else {
-            var event = e.changedTouches[0];
-        }
-
-        //フリックしたときに画面を動かさないようにデフォルト動作を抑制
-        e.preventDefault();
+        //if (e.type === "mousemove") {
+        var event = e;
+        //} else {
+        //    var event = e.changedTouches[0];
+        //}
 
         //マウスが動いた場所に要素を動かす
         mapX += event.offsetX - nx;
@@ -144,11 +146,12 @@ onload = () => {
 
     //マウスボタンが上がったら発火
     function mup(e) {
+        document.getElementById("text").innerText = e.type;
         //ムーブベントハンドラの消去
         document.body.removeEventListener("mousemove", mmove, false);
         canvas.removeEventListener("mouseup", mup, false);
-        document.body.removeEventListener("touchmove", mmove, false);
-        canvas.removeEventListener("touchend", mup, false);
+        //document.body.removeEventListener("touchmove", mmove, false);
+        //canvas.removeEventListener("touchend", mup, false);
     }
 }
 
@@ -192,6 +195,7 @@ function selectCountry() {
     document.getElementById("military").innerText = owner.military;
     document.getElementById("expandArmy").disabled = false;
     document.getElementById("disarm").disabled = false;
+    document.getElementById("annex").disabled = false;
 }
 
 function annexProvince() { //選択しているマスを選択している国で併合します

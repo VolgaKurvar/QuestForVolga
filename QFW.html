@@ -8,13 +8,12 @@
     <title>Quest for Volga</title>
     <style>
         * {
-            margin: 0px !important;
+            margin: 0px;
         }
     </style>
 </head>
 
-<body
-    style="background-color: orange;margin: 0px !important;margin-left: 200px !important;margin-right: 200px !important;height: 100%;">
+<body style="background-color: orange;height: 100%;margin-left: 10%;margin-right: 10%">
     <div id="header">
         <h1>Quest for Volga</h1>
         <h2>ゲームの説明</h2>
@@ -29,7 +28,7 @@
             <div style="height: 100px;">
                 <img id="myCountryFlag" style="height: 100px;float: left;" src="img/255.255.255.png">
                 <div style="height: 100%">
-                    <div id="myCountryName" style="height: 80%;font-size: 64px;">未選択</div>
+                    <div id="myCountryName" style="height: 80%;font-size: 4em;">未選択</div>
                     <div id="text" style="height: 20%;">指令：国を選択するか、新しく国を作成してください</div>
                 </div>
             </div>
@@ -51,7 +50,7 @@
                 <span>軍事力</span>
                 <span id="targetMilitary">???</span>
             </div>
-            <button onclick="declareWar()">宣戦布告する</button>
+            <button id="declareWar" onclick="declareWar()" disabled>宣戦布告する</button>
         </div>
         <canvas id="canvas" width="800" height="450" style="background-color: beige;"></canvas>
         <br>
@@ -59,7 +58,7 @@
         <input id="mcName" type="text" value="国名">
         <button type="submit" onclick="createCountry()">建国する！</button>
         <button onclick="selectCountry()">国を選択</button>
-        <button id="annex" onclick="switchAnnexMode()">併合開始</button>
+        <button id="annex" onclick="switchAnnexMode()" disabled>併合開始</button>
         <button id="expandArmy" onclick="expandArmy()" disabled>軍拡する</button>
         <button id="disarm" onclick="disarm()" disabled>軍縮する</button>
         <button onclick="test()">怪しい</button>
