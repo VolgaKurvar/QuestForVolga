@@ -72,6 +72,7 @@ onload = () => {
         console.log(r, g, b);
         let owner = getOwner(r, g, b);
         if (owner !== null) politicalMap.fill(provinceMap, lastX, lastY, owner.r, owner.g, owner.b);
+        else politicalMap.fill(provinceMap, lastX, lastY, 255, 255, 255);
         lastX = e.offsetX - mapX;
         lastY = e.offsetY - mapY;
         politicalMap.fill(provinceMap, lastX, lastY, 255, 0, 0); //マスを赤く塗る
@@ -81,6 +82,14 @@ onload = () => {
         //選択しているマスの情報を表示する
         [r, g, b] = provinceMap.getColor(lastX, lastY);
         owner = getOwner(r, g, b);
+        if (owner === null) {
+            targetCountryId = null;
+            document.getElementById("targetCountryFlag").src = "img/255.255.255.png";
+            document.getElementById("targetCountryName").innerText = "領有国なし";
+            document.getElementById("targetMoney").innerText = "???";
+            document.getElementById("targetMilitary").innerText = "???";
+            return;
+        }
         targetCountryId = owner.countryId;
         document.getElementById("targetCountryFlag").src = "img/" + owner.r + "." + owner.g + "." + owner.b + ".png";
         document.getElementById("targetCountryName").innerText = owner.name;
@@ -89,11 +98,12 @@ onload = () => {
     }
 
     function mdown(e) {
+        /*
         if (e.type === "mousedown") {
             var event = e;
         } else {
             var event = e.changedTouches[0];
-        }
+        }*/
 
         //要素内の相対座標を取得
         nx = event.offsetX;
@@ -202,7 +212,9 @@ function annexProvince() { //選択しているマスを選択している国で
 }
 
 function getOwner(r, g, b) { //プロヴィンスのRGBから領有国情報を取得します
-    const responce = sqlRequest("SELECT * FROM country WHERE countryId=(SELECT countryId FROM province WHERE r=" + r + " AND g=" + g + " AND b=" + b + ")");
+    const query = "SELECT * FROM country WHERE countryId=(SELECT countryId FROM province WHERE r=" + r + " AND g=" + g + " AND b=" + b + ")";
+    const responce = sqlRequest(query);
+    console.log(query + "\n見つかった：" + responce);
     if (responce.length < 1) return null; //国が見つからなかった時
     return responce[0];
 }
