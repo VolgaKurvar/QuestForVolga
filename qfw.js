@@ -3,6 +3,7 @@
 const FILL_SIZE = 150;
 let provinceMap = null, politicalMap = null;
 let nx = 0, ny = 0, lastX = 0, lastY = 0, mapX = -2500, mapY = -300, myCountryColor = [255, 255, 255], annexMode = 0, pLastTime = 0, cLastTime = 0, myCountryId = null, targetCountryId = null;
+let isMouse = true;
 
 onload = () => {
     //canvas初期化
@@ -21,8 +22,8 @@ onload = () => {
     //ウィンドウ幅の7割を地図表示領域とする
     canvas.width = Math.round(document.getElementById("middle").offsetWidth * 0.9);
     canvas.height = 540;
-    canvas.addEventListener("mousedown", mdown, false);
-    //canvas.addEventListener("touchstart", mdown, false);
+    document.addEventListener("mousemove", identfyDeviceType);
+    document.addEventListener("touchstart", identfyDeviceType);
     document.getElementById("color").value = "#" + Math.floor(Math.random() * 256).toString(16) + Math.floor(Math.random() * 256).toString(16) + Math.floor(Math.random() * 256).toString(16);
 
     //UIのサイズ調整
@@ -38,7 +39,6 @@ onload = () => {
     for (const i of sqlRequest("SELECT x,y,country.r,country.g,country.b FROM province INNER JOIN country ON province.countryId=country.countryId")) {
         politicalMap.fill(provinceMap, parseInt(i.x), parseInt(i.y), parseInt(i.r), parseInt(i.g), parseInt(i.b));
     }
-    //storage["politicalMapImageData"] = JSON.stringify(politicalMap.imageData);
     ctx.putImageData(politicalMap.imageData, mapX, mapY);
 
     setInterval(() => {
@@ -65,15 +65,22 @@ onload = () => {
         }
     }, 3000);
 
+    function identfyDeviceType(e) {
+        isMouse = e.changedTouches ? false : true;
+        document.removeEventListener("mousemove", identfyDeviceType);
+        document.removeEventListener("touchstart", identfyDeviceType);
+        canvas.addEventListener("mousedown", mdown, false);
+        canvas.addEventListener("touchstart", mdown, false);
+    }
 
-    function fillstart(e) {
+    function fillstart(mouseX, mouseY) {
         let [r, g, b] = provinceMap.getColor(lastX, lastY);
         console.log(r, g, b);
         let owner = getOwner(r, g, b);
         if (owner !== null) politicalMap.fill(provinceMap, lastX, lastY, owner.r, owner.g, owner.b);
         else politicalMap.fill(provinceMap, lastX, lastY, 255, 255, 255);
-        lastX = e.offsetX - mapX;
-        lastY = e.offsetY - mapY;
+        lastX = mouseX - mapX;
+        lastY = mouseY - mapY;
         politicalMap.fill(provinceMap, lastX, lastY, 255, 0, 0); //マスを赤く塗る
         ctx.putImageData(politicalMap.imageData, mapX, mapY);
         if (annexMode == 1) annexProvince();
@@ -101,57 +108,55 @@ onload = () => {
     }
 
     function mdown(e) {
-        document.getElementById("text").innerText = e.type;
-        //if (e.type === "mousedown") {
-        var event = e;
-        // } else {
-        //    var event = e.changedTouches[0];
-        //}
+        e.preventDefault();
+        if (e.type !== "mousedown") e = e.changedTouches[0];
+        const mouseX = Math.round(e.pageX);
+        const mouseY = Math.round(e.pageY);
+        fillstart(mouseX - canvas.offsetLeft, mouseY - canvas.offsetTop);
 
         //要素内の相対座標を取得
-        nx = event.offsetX;
-        ny = event.offsetY;
+        nx = mouseX;
+        ny = mouseY;
 
         //ムーブイベントにコールバック
-        document.body.addEventListener("mousemove", mmove, false);
-        //document.body.addEventListener("touchmove", mmove, false);
+        canvas.addEventListener("mousemove", mmove, false);
+        canvas.addEventListener("touchmove", mmove, false);
         canvas.addEventListener("mouseup", mup, false);
-        //canvas.addEventListener("touchend", mup, false);
-        document.body.addEventListener("mouseleave", mup, false);
-        //ocument.body.addEventListener("touchleave", mup, false);
-        fillstart(event);
+        canvas.addEventListener("touchend", mup, false);
+        canvas.addEventListener("mouseleave", mup, false);
+        canvas.addEventListener("touchcancel", mup, false);
     }
 
     //マウスカーソルが動いたときに発火
     function mmove(e) {
-        document.getElementById("text").innerText = e.type;
-        //同様にマウスとタッチの差異を吸収
-        //if (e.type === "mousemove") {
-        var event = e;
-        //} else {
-        //    var event = e.changedTouches[0];
-        //}
+        e.preventDefault();
+        if (e.type !== "mousemove") e = e.changedTouches[0];
+        const mouseX = Math.round(e.pageX);
+        const mouseY = Math.round(e.pageY);
 
         //マウスが動いた場所に要素を動かす
-        mapX += event.offsetX - nx;
-        mapY += event.offsetY - ny;
+        mapX += mouseX - nx;
+        mapY += mouseY - ny;
         if (mapX > 0) mapX = 0;
         else if (mapX - canvas.width < -1 * map.width) mapX = -1 * map.width + canvas.width;
         if (mapY > 0) mapY = 0;
         else if (mapY - canvas.height < -1 * map.height) mapY = -1 * map.height + canvas.height;
         ctx.putImageData(politicalMap.imageData, mapX, mapY);
-        nx = event.offsetX;
-        ny = event.offsetY;
+        nx = mouseX;
+        ny = mouseY;
     }
 
     //マウスボタンが上がったら発火
     function mup(e) {
+        e.preventDefault();
         document.getElementById("text").innerText = e.type;
         //ムーブベントハンドラの消去
-        document.body.removeEventListener("mousemove", mmove, false);
+        canvas.removeEventListener("mousemove", mmove, false);
+        canvas.removeEventListener("touchmove", mmove, false);
         canvas.removeEventListener("mouseup", mup, false);
-        //document.body.removeEventListener("touchmove", mmove, false);
-        //canvas.removeEventListener("touchend", mup, false);
+        canvas.removeEventListener("touchend", mup, false);
+        canvas.removeEventListener("mouseleave", mup, false);
+        canvas.removeEventListener("touchcancel", mup, false);
     }
 }
 
@@ -218,7 +223,6 @@ function annexProvince() { //選択しているマスを選択している国で
 function getOwner(r, g, b) { //プロヴィンスのRGBから領有国情報を取得します
     const query = "SELECT * FROM country WHERE countryId=(SELECT countryId FROM province WHERE r=" + r + " AND g=" + g + " AND b=" + b + ")";
     const responce = sqlRequest(query);
-    console.log(query + "\n見つかった：" + responce);
     if (responce.length < 1) return null; //国が見つからなかった時
     return responce[0];
 }
