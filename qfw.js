@@ -18,9 +18,6 @@ onload = () => {
     ctx.drawImage(document.getElementById("whiteMap"), 0, 0, map.width, map.height);
     politicalMap = new ImageDataController(ctx.getImageData(0, 0, map.width, map.height));
 
-    //ウィンドウ幅の7割を地図表示領域とする
-    canvas.width = Math.round(document.getElementById("middle").offsetWidth * 0.9);
-    canvas.height = 540;
     //document.addEventListener("mousemove", identfyDeviceType);
     //document.addEventListener("touchstart", identfyDeviceType);
     const canvasDC = new DragController(canvas, fillstart2, moveMap);
@@ -31,6 +28,9 @@ onload = () => {
         const targetCountryFlag = document.getElementById("targetCountryFlag");
         targetCountryFlag.height = Math.round(targetCountryFlag.width * 0.67); //横：縦=3:2
         document.getElementById("middle").style.height = window.innerHeight - document.getElementById("header").offsetHeight + "px"; //ミドルを可能な限り縦に伸ばす
+        //ウィンドウ幅の7割を地図表示領域とする
+        canvas.width = Math.round(document.getElementById("middle").offsetWidth * 0.9);
+        canvas.height = Math.round(window.innerHeight * 0.8);
     }
 
     //地図生成
@@ -63,7 +63,7 @@ onload = () => {
                 document.getElementById("money").innerText = i.money;
             }
         }
-    }, 3000);
+    }, 10000);
 
     function moveMap() {
         mapX += canvasDC.latestMouseX - canvasDC.oldMouseX;
@@ -339,30 +339,30 @@ class DragController {
         this.element = element;
         this.startFunc = startFunc;
         this.dragFunc = dragFunc;
-        element.addEventListener("mousedown", this.start.bind(this));
-        element.addEventListener("touchstart", this.start.bind(this));
+        element.addEventListener("mousedown", this.start);
+        element.addEventListener("touchstart", this.start);
         self = this;
     }
 
     start(e) {
         e.preventDefault();
         if (e.type !== "mousedown") e = e.changedTouches[0];
-        this.startMouseX = Math.round(e.pageX);
-        this.startMouseY = Math.round(e.pageY);
-        this.oldMouseX = this.startMouseX;
-        this.oldMouseY = this.startMouseY;
-        this.latestMouseX = this.startMouseX;
-        this.latestMouseY = this.startMouseY;
-        this.isDragging = true;
+        self.startMouseX = Math.round(e.pageX);
+        self.startMouseY = Math.round(e.pageY);
+        self.oldMouseX = self.startMouseX;
+        self.oldMouseY = self.startMouseY;
+        self.latestMouseX = self.startMouseX;
+        self.latestMouseY = self.startMouseY;
+        self.isDragging = true;
 
-        this.element.addEventListener("mousemove", this.drag);
-        this.element.addEventListener("touchmove", this.drag);
-        this.element.addEventListener("mouseup", this.end.bind(this));
-        this.element.addEventListener("touchend", this.end.bind(this));
-        this.element.addEventListener("mouseleave", this.end.bind(this));
-        this.element.addEventListener("touchcancel", this.end.bind(this));
+        self.element.addEventListener("mousemove", self.drag);
+        self.element.addEventListener("touchmove", self.drag);
+        self.element.addEventListener("mouseup", self.end);
+        self.element.addEventListener("touchend", self.end);
+        self.element.addEventListener("mouseleave", self.end);
+        self.element.addEventListener("touchcancel", self.end);
 
-        this.startFunc();
+        self.startFunc();
     }
 
     drag(e) {
@@ -378,12 +378,12 @@ class DragController {
 
     end(e) {
         e.preventDefault();
-        this.isDragging = false;
-        this.element.removeEventListener("mousemove", this.drag.bind(this));
-        this.element.removeEventListener("touchmove", this.drag.bind(this));
-        this.element.removeEventListener("mouseup", this.end);
-        this.element.removeEventListener("touchend", this.end);
-        this.element.removeEventListener("mouseleave", this.end);
-        this.element.removeEventListener("touchcancel", this.end);
+        self.isDragging = false;
+        self.element.removeEventListener("mousemove", self.drag);
+        self.element.removeEventListener("touchmove", self.drag);
+        self.element.removeEventListener("mouseup", self.end);
+        self.element.removeEventListener("touchend", self.end);
+        self.element.removeEventListener("mouseleave", self.end);
+        self.element.removeEventListener("touchcancel", self.end);
     }
 }
