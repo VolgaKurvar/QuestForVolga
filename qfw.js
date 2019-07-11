@@ -82,7 +82,7 @@ function fillstart(mouseX, mouseY) {
 
     //この時点でselectingProvinceには、前にクリックしたプロヴィンスの情報が入っている
     if (selectingProvince != null) {
-        let owner = getOwner(selectingProvince.r, selectingProvince.g, selectingProvince.b);
+        let owner = selectingProvince.getOwner();
         if (owner !== null) politicalMap.fill(provinceMap, selectingProvince.x, selectingProvince.y, owner.r, owner.g, owner.b); //ここのlastXとlastYをどうにかする
         else politicalMap.fill(provinceMap, selectingProvince.x, selectingProvince.y, 255, 255, 255);
     }
@@ -101,62 +101,25 @@ function fillstart(mouseX, mouseY) {
 
     //選択しているマスの情報を表示する
 
-    let owner = getOwner(r, g, b);
+    let owner = selectingProvince.getOwner();
     if (owner === null) {
         targetCountry = null;
         document.getElementById("targetCountryFlag").src = "img/255.255.255.png";
         document.getElementById("targetCountryName").innerText = "領有国なし";
         document.getElementById("targetMoney").innerText = "???";
         document.getElementById("targetMilitary").innerText = "???";
+        document.getElementById("create").disabled = false;
         document.getElementById("select").disabled = true;
         return;
     }
     targetCountry = new Country(owner);
+    document.getElementById("create").disabled = true;
     document.getElementById("select").disabled = false;
     document.getElementById("targetCountryFlag").src = "img/" + owner.r + "." + owner.g + "." + owner.b + ".png";
     document.getElementById("targetCountryName").innerText = owner.name;
     document.getElementById("targetMoney").innerText = owner.money;
     document.getElementById("targetMilitary").innerText = owner.military;
     if (myCountry !== null && myCountry.id !== targetCountry.id) document.getElementById("declareWar").disabled = false;
-}
-
-function createCountry() {
-    const color = document.getElementById("color").value;
-    const r = parseInt(color.substring(1, 3), 16);
-    const g = parseInt(color.substring(3, 5), 16);
-    const b = parseInt(color.substring(5, 7), 16);
-    if (sqlRequest("SELECT * FROM country WHERE r=" + r + " AND g=" + g + " AND b=" + b).length > 0) {
-        alert("同じ色を使用している国家が既に存在します");
-        return;
-    }
-    const [pr, pg, pb] = provinceMap.getColor(canvasDC.latestMouseX - mapX, canvasDC.latestMouseY - mapY);
-    if (pr == 0 && pg == 0 && pb == 0) {
-        alert("国境線です");
-        return;
-    }
-    if (isOwned(pr, pg, pb)) {
-        alert("そのプロヴィンスは既に領有されています");
-        return;
-    }
-    sqlRequest("INSERT INTO `country` (`name`, `r`, `g`, `b`, `money`, `timestamp`) VALUES ('" + document.getElementById("mcName").value + "', " + r + ", " + g + ", " + b + " , 0, NOW())");
-    myCountry = new Country(sqlRequest("SELECT * from country order by countryId desc limit 1")[0]); //最新のidを取得
-    myCountry.annexProvince(selectingProvince);
-    politicalMap.fill(provinceMap, canvasDC.latestMouseX - mapX, canvasDC.latestMouseX - mapY, r, g, b);
-    ctx.putImageData(politicalMap.imageData, mapX, mapY);
-    myCountry.select();
-}
-
-function getOwner(r, g, b) { //プロヴィンスのRGBから領有国情報を取得します
-    const query = "SELECT * FROM country WHERE countryId=(SELECT countryId FROM province WHERE r=" + r + " AND g=" + g + " AND b=" + b + ")";
-    const responce = sqlRequest(query);
-    if (responce.length < 1) return null; //国が見つからなかった時
-    return responce[0];
-}
-
-function isOwned(r, g, b) {
-    const owner = getOwner(r, g, b);
-    if (owner == null || owner.r == 255 && owner.g == 255 && owner.b == 255) return false;
-    return true;
 }
 
 function switchAnnexMode() {
@@ -203,7 +166,7 @@ function sqlRequest(state = "") {
 }
 
 function test() {
-    localStorage.clear();
+    //localStorage.clear();
     //console.log(sqlRequest("SELECT * FROM war"));
     //最新のプロヴィンス情報を取得↓
     //SELECT * FROM province ORDER BY timestamp desc limit 3;
@@ -220,6 +183,37 @@ class Province {
         this.r = r;
         this.g = g;
         this.b = b;
+    }
+
+    getOwner() {
+        const responce = sqlRequest("SELECT * FROM country WHERE countryId=(SELECT countryId FROM province WHERE r=" + this.r + " AND g=" + this.g + " AND b=" + this.b + ")");;
+        if (responce.length < 1) return null; //国が見つからなかった時
+        return responce[0];
+    }
+
+    isOwned() {
+        return this.getOwner() != null;
+    }
+
+    createCountry() {
+        const color = document.getElementById("color").value;
+        const r = parseInt(color.substring(1, 3), 16);
+        const g = parseInt(color.substring(3, 5), 16);
+        const b = parseInt(color.substring(5, 7), 16);
+        if (sqlRequest("SELECT * FROM country WHERE (r=" + r + " AND g=" + g + " AND b=" + b).length > 0) {
+            alert("同じ色か同じ名前を使用している国家が既に存在します");
+            return;
+        }
+        if (this.isOwned()) {
+            alert("そのプロヴィンスは既に領有されています");
+            return;
+        }
+        sqlRequest("INSERT INTO `country` (`name`, `r`, `g`, `b`, `money`, `timestamp`) VALUES ('" + document.getElementById("mcName").value + "', " + r + ", " + g + ", " + b + " , 0, NOW())");
+        const country = new Country(sqlRequest("SELECT * from country order by countryId desc limit 1")[0]); //最新のidを取得
+        country.annexProvince(this);
+        politicalMap.fill(provinceMap, this.x, this.x, r, g, b);
+        ctx.putImageData(politicalMap.imageData, mapX, mapY);
+        return country;
     }
 }
 
@@ -277,7 +271,7 @@ class Country {
 
     annexProvince(province) { //選択しているマスを選択している国で併合します
         if (province == null) return;
-        if (isOwned(province.r, province.g, province.b)) {
+        if (province.isOwned()) {
             sqlRequest("UPDATE province SET countryId=" + this.id + ",timestamp=NOW() WHERE r=" + province.r + " AND g=" + province.g + " AND b=" + province.b);
         } else {
             sqlRequest("INSERT INTO `province` (`x`, `y`, `r`, `g`, `b`, `timestamp`, `countryId`) VALUES (" + province.x + ", " + province.y + ", " + province.r + ", " + province.g + ", " + province.b + ", NOW(), " + this.id + ")");

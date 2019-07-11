@@ -58,7 +58,8 @@
         <div id="footbar" style="height: 5%;width:100%">
             <input id="color" value="#ff0000" type="color">
             <input id="mcName" type="text" value="国名">
-            <button type="submit" onclick="createCountry()">建国する！</button>
+            <button id="create" type="submit" onclick="selectingProvince.createCountry().select()"
+                disabled>建国する！</button>
             <button id="select" onclick="targetCountry.select()" disabled>国を選択</button>
             <button id="annex" onclick="switchAnnexMode()" disabled>併合開始</button>
             <button id="expandArmy" onclick="myCountry.expandArmy()" disabled>軍拡する</button>
