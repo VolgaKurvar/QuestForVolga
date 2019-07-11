@@ -2,25 +2,23 @@
 
 const FILL_SIZE = 150;
 let provinceMap = null, politicalMap = null;
-let nx = 0, ny = 0, lastX = 0, lastY = 0, mapX = -2500, mapY = -300, myCountryColor = [255, 255, 255], annexMode = 0, pLastTime = 0, cLastTime = 0, myCountryId = null, targetCountryId = null;
+let nx = 0, ny = 0, mapX = -2500, mapY = -300, myCountryColor = [255, 255, 255], annexMode = 0, pLastTime = 0, cLastTime = 0, myCountryId = null, targetCountryId = null;
+let selectingProvince = null;
 
 onload = () => {
     //canvas初期化
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext('2d');
-    const map = document.getElementById("map");
-    canvas.width = map.width;
-    canvas.height = map.height;
+    const map = document.getElementById("whiteMap");
 
     //プロヴィンスマップと白地図を取得
-    ctx.drawImage(map, 0, 0, map.width, map.height);
-    provinceMap = new ImageDataController(ctx.getImageData(0, 0, map.width, map.height));
-    ctx.drawImage(document.getElementById("whiteMap"), 0, 0, map.width, map.height);
-    politicalMap = new ImageDataController(ctx.getImageData(0, 0, map.width, map.height));
+    provinceMap = new ImageDataController(createImageData(document.getElementById("provinceMap")));
+    politicalMap = new ImageDataController(createImageData(document.getElementById("whiteMap")));
 
-    //document.addEventListener("mousemove", identfyDeviceType);
-    //document.addEventListener("touchstart", identfyDeviceType);
+    //canvas要素に対してドラッグを可能にします
     const canvasDC = new DragController(canvas, fillstart2, moveMap);
+
+    //ランダムな色を設定
     document.getElementById("color").value = "#" + Math.floor(Math.random() * 256).toString(16) + Math.floor(Math.random() * 256).toString(16) + Math.floor(Math.random() * 256).toString(16);
 
     //UIのサイズ調整
@@ -29,8 +27,8 @@ onload = () => {
         targetCountryFlag.height = Math.round(targetCountryFlag.width * 0.67); //横：縦=3:2
         document.getElementById("middle").style.height = window.innerHeight - document.getElementById("header").offsetHeight + "px"; //ミドルを可能な限り縦に伸ばす
         //ウィンドウ幅の7割を地図表示領域とする
-        canvas.width = Math.round(document.getElementById("middle").offsetWidth * 0.9);
-        canvas.height = Math.round(window.innerHeight * 0.8);
+        canvas.width = Math.floor(document.getElementById("middle").offsetWidth * 0.88);
+        canvas.height = Math.floor(window.innerHeight * 0.7);
     }
 
     //地図生成
@@ -80,14 +78,19 @@ onload = () => {
     }
 
     function fillstart(mouseX, mouseY) {
-        let [r, g, b] = provinceMap.getColor(lastX, lastY);
-        console.log(r, g, b);
-        let owner = getOwner(r, g, b);
-        if (owner !== null) politicalMap.fill(provinceMap, lastX, lastY, owner.r, owner.g, owner.b);
-        else politicalMap.fill(provinceMap, lastX, lastY, 255, 255, 255);
-        lastX = mouseX - mapX;
-        lastY = mouseY - mapY;
-        politicalMap.fill(provinceMap, lastX, lastY, 255, 0, 0); //マスを赤く塗る
+        //この時点でselectingProvinceには、前にクリックしたプロヴィンスの情報が入っている
+        if (selectingProvince != null) {
+            let owner = getOwner(selectingProvince.r, selectingProvince.g, selectingProvince.b);
+            if (owner !== null) politicalMap.fill(provinceMap, selectingProvince.x, selectingProvince.y, owner.r, owner.g, owner.b); //ここのlastXとlastYをどうにかする
+            else politicalMap.fill(provinceMap, selectingProvince.x, selectingProvince.y, 255, 255, 255);
+        }
+
+        //選択しているマスの情報を更新します
+        //x,yにはマップ上での座標が代入されます
+        const x = mouseX - mapX, y = mouseY - mapY;
+        let [r, g, b] = provinceMap.getColor(x, y);
+        selectingProvince = new Province(x, y, r, g, b);
+        politicalMap.fill(provinceMap, x, y, 255, 0, 0); //マスを赤く塗る
         ctx.putImageData(politicalMap.imageData, mapX, mapY);
         if (annexMode == 1) annexProvince();
 
@@ -95,8 +98,10 @@ onload = () => {
         document.getElementById("declareWar").disabled = true;
 
         //選択しているマスの情報を表示する
-        [r, g, b] = provinceMap.getColor(lastX, lastY);
-        owner = getOwner(r, g, b);
+
+        selectingProvinceColor = { "r": r, "g": g, "b": b };
+
+        let owner = getOwner(r, g, b);
         if (owner === null) {
             targetCountryId = null;
             document.getElementById("targetCountryFlag").src = "img/255.255.255.png";
@@ -141,8 +146,7 @@ function createCountry() {
 }
 
 function selectCountry() {
-    let [r, g, b] = provinceMap.getColor(lastX, lastY); //選択しているプロヴィンスのRGBを取得
-    const owner = getOwner(r, g, b);
+    const owner = getOwner(selectingProvince.r, selectingProvince.g, selectingProvince.b);
     console.log(owner);
     if (owner === null) return; //領有国情報が見つからなかったらreturn
 
@@ -277,6 +281,18 @@ function sqlRequest(state = "") {
     return list;
 }
 
+function createImageData(img) {
+    //5616✕2160の画像を生成
+    const IMG_WIDTH = 5616, IMG_HEIGHT = 2160;
+    const cv = document.createElement('canvas');
+    cv.width = img.naturalWidth;
+    cv.height = img.naturalHeight;
+    var ct = cv.getContext('2d');
+    ct.drawImage(img, 0, 0);
+    var data = ct.getImageData(0, 0, cv.width, cv.height);
+    return data;
+}
+
 function test() {
     localStorage.clear();
     //console.log(sqlRequest("SELECT * FROM war"));
@@ -285,6 +301,16 @@ function test() {
     //UPDATE province SET countryId=2,timestamp=NOW() WHERE r=207 AND g=223 AND b=223;
     //SELECT countryId,name from country order by countryId desc limit 3
     //(Math.floor(Math.random() * 40) + 1)
+}
+
+class Province {
+    constructor(x = 0, y = 0, r = 255, g = 255, b = 255) {
+        this.x = x;
+        this.y = y;
+        this.r = r;
+        this.g = g;
+        this.b = b;
+    }
 }
 
 class ImageDataController {
