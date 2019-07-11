@@ -2,9 +2,9 @@
 
 const FILL_SIZE = 150;
 let provinceMap = null, politicalMap = null;
-let nx = 0, ny = 0, mapX = -2500, mapY = -300, annexMode = 0, pLastTime = 0, cLastTime = 0, myCountry = null, targetCountry = null;
+let mapX = -2500, mapY = -300, annexMode = 0, pLastTime = 0, cLastTime = 0, myCountry = null, targetCountry = null;
 let selectingProvince = null;
-let ctx;
+let ctx, canvasDC;
 
 onload = () => {
     //canvas初期化
@@ -17,7 +17,17 @@ onload = () => {
     politicalMap = new ImageDataController(ImageDataController.createImageData(document.getElementById("whiteMap")));
 
     //canvas要素に対してドラッグを可能にします
-    const canvasDC = new DragController(canvas, fillstart2, moveMap);
+    canvasDC = new DragController(canvas, () => {
+        fillstart(canvasDC.startMouseX - canvas.offsetLeft, canvasDC.startMouseY - canvas.offsetTop)
+    }, () => {
+        mapX += canvasDC.latestMouseX - canvasDC.oldMouseX;
+        mapY += canvasDC.latestMouseY - canvasDC.oldMouseY;
+        if (mapX > 0) mapX = 0;
+        else if (mapX - canvas.width < -1 * map.width) mapX = -1 * map.width + canvas.width;
+        if (mapY > 0) mapY = 0;
+        else if (mapY - canvas.height < -1 * map.height) mapY = -1 * map.height + canvas.height;
+        ctx.putImageData(politicalMap.imageData, mapX, mapY);
+    });
 
     //ランダムな色を設定
     document.getElementById("color").value = "#" + Math.floor(Math.random() * 256).toString(16) + Math.floor(Math.random() * 256).toString(16) + Math.floor(Math.random() * 256).toString(16);
@@ -63,20 +73,6 @@ onload = () => {
             }
         }
     }, 10000);
-
-    function moveMap() {
-        mapX += canvasDC.latestMouseX - canvasDC.oldMouseX;
-        mapY += canvasDC.latestMouseY - canvasDC.oldMouseY;
-        if (mapX > 0) mapX = 0;
-        else if (mapX - canvas.width < -1 * map.width) mapX = -1 * map.width + canvas.width;
-        if (mapY > 0) mapY = 0;
-        else if (mapY - canvas.height < -1 * map.height) mapY = -1 * map.height + canvas.height;
-        ctx.putImageData(politicalMap.imageData, mapX, mapY);
-    }
-
-    function fillstart2() {
-        fillstart(canvasDC.startMouseX - canvas.offsetLeft, canvasDC.startMouseY - canvas.offsetTop);
-    }
 }
 
 function fillstart(mouseX, mouseY) {
@@ -98,7 +94,7 @@ function fillstart(mouseX, mouseY) {
     //地図を更新します
     ctx.putImageData(politicalMap.imageData, mapX, mapY);
     //併合モードが有効な場合は併合します
-    if (annexMode == 1) annexProvince();
+    if (annexMode == 1) myCountry.annexProvince(selectingProvince);
 
     //宣戦布告ボタンを一度無効にする
     document.getElementById("declareWar").disabled = true;
@@ -133,7 +129,7 @@ function createCountry() {
         alert("同じ色を使用している国家が既に存在します");
         return;
     }
-    const [pr, pg, pb] = provinceMap.getColor(nx - mapX, ny - mapY);
+    const [pr, pg, pb] = provinceMap.getColor(canvasDC.latestMouseX - mapX, canvasDC.latestMouseY - mapY);
     if (pr == 0 && pg == 0 && pb == 0) {
         alert("国境線です");
         return;
@@ -144,27 +140,10 @@ function createCountry() {
     }
     sqlRequest("INSERT INTO `country` (`name`, `r`, `g`, `b`, `money`, `timestamp`) VALUES ('" + document.getElementById("mcName").value + "', " + r + ", " + g + ", " + b + " , 0, NOW())");
     myCountry = new Country(sqlRequest("SELECT * from country order by countryId desc limit 1")[0]); //最新のidを取得
-    annexProvince();
-    politicalMap.fill(provinceMap, nx - mapX, ny - mapY, r, g, b);
+    myCountry.annexProvince(selectingProvince);
+    politicalMap.fill(provinceMap, canvasDC.latestMouseX - mapX, canvasDC.latestMouseX - mapY, r, g, b);
     ctx.putImageData(politicalMap.imageData, mapX, mapY);
-    selectCountry();
-}
-
-function annexProvince() { //選択しているマスを選択している国で併合します
-    if (myCountry == null) return;
-
-    const [pr, pg, pb] = provinceMap.getColor(nx - mapX, ny - mapY);
-    if (pr == 0 && pg == 0 && pb == 0) {
-        alert("国境線です");
-        return;
-    }
-    if (isOwned(pr, pg, pb)) {
-        sqlRequest("UPDATE province SET countryId=" + myCountry.id + ",timestamp=NOW() WHERE r=" + pr + " AND g=" + pg + " AND b=" + pb);
-    } else {
-        sqlRequest("INSERT INTO `province` (`x`, `y`, `r`, `g`, `b`, `timestamp`, `countryId`) VALUES (" + (nx - mapX) + ", " + (ny - mapY) + ", " + pr + ", " + pg + ", " + pb + ", NOW(), " + myCountry.id + ")");
-    }
-    politicalMap.fill(provinceMap, nx - mapX, ny - mapY, myCountry.r, myCountry.g, myCountry.b);
-    ctx.putImageData(politicalMap.imageData, mapX, mapY);
+    myCountry.select();
 }
 
 function getOwner(r, g, b) { //プロヴィンスのRGBから領有国情報を取得します
@@ -176,7 +155,7 @@ function getOwner(r, g, b) { //プロヴィンスのRGBから領有国情報を�
 
 function isOwned(r, g, b) {
     const owner = getOwner(r, g, b);
-    if (owner.r == 255, owner.g == 255, owner.b == 255) return false;
+    if (owner == null || owner.r == 255 && owner.g == 255 && owner.b == 255) return false;
     return true;
 }
 
@@ -234,6 +213,7 @@ function test() {
 }
 
 class Province {
+    //座標はマップ上の座標です
     constructor(x = 0, y = 0, r = 255, g = 255, b = 255) {
         this.x = x;
         this.y = y;
@@ -293,6 +273,17 @@ class Country {
         document.getElementById("expandArmy").disabled = false;
         document.getElementById("disarm").disabled = false;
         document.getElementById("annex").disabled = false;
+    }
+
+    annexProvince(province) { //選択しているマスを選択している国で併合します
+        if (province == null) return;
+        if (isOwned(province.r, province.g, province.b)) {
+            sqlRequest("UPDATE province SET countryId=" + this.id + ",timestamp=NOW() WHERE r=" + province.r + " AND g=" + province.g + " AND b=" + province.b);
+        } else {
+            sqlRequest("INSERT INTO `province` (`x`, `y`, `r`, `g`, `b`, `timestamp`, `countryId`) VALUES (" + province.x + ", " + province.y + ", " + province.r + ", " + province.g + ", " + province.b + ", NOW(), " + this.id + ")");
+        }
+        politicalMap.fill(provinceMap, province.x, province.y, this.r, this.g, this.b);
+        ctx.putImageData(politicalMap.imageData, mapX, mapY);
     }
 }
 
