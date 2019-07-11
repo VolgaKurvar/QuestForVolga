@@ -51,7 +51,7 @@
                     <span>軍事力</span>
                     <span id="targetMilitary">???</span>
                 </div>
-                <button id="declareWar" onclick="declareWar()" disabled>宣戦布告する</button>
+                <button id="declareWar" onclick="myCountry.declareWar(targetCountry)" disabled>宣戦布告する</button>
             </div>
             <canvas id="canvas" width="100" height="100" style="background-color: beige;"></canvas>
         </div>
@@ -59,10 +59,10 @@
             <input id="color" value="#ff0000" type="color">
             <input id="mcName" type="text" value="国名">
             <button type="submit" onclick="createCountry()">建国する！</button>
-            <button onclick="selectCountry()">国を選択</button>
+            <button id="select" onclick="targetCountry.select()" disabled>国を選択</button>
             <button id="annex" onclick="switchAnnexMode()" disabled>併合開始</button>
-            <button id="expandArmy" onclick="expandArmy()" disabled>軍拡する</button>
-            <button id="disarm" onclick="disarm()" disabled>軍縮する</button>
+            <button id="expandArmy" onclick="myCountry.expandArmy()" disabled>軍拡する</button>
+            <button id="disarm" onclick="myCountry.disarm()" disabled>軍縮する</button>
             <button onclick="test()">怪しい</button>
         </div>
     </div>

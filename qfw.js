@@ -2,18 +2,19 @@
 
 const FILL_SIZE = 150;
 let provinceMap = null, politicalMap = null;
-let nx = 0, ny = 0, mapX = -2500, mapY = -300, myCountryColor = [255, 255, 255], annexMode = 0, pLastTime = 0, cLastTime = 0, myCountryId = null, targetCountryId = null;
+let nx = 0, ny = 0, mapX = -2500, mapY = -300, annexMode = 0, pLastTime = 0, cLastTime = 0, myCountry = null, targetCountry = null;
 let selectingProvince = null;
+let ctx;
 
 onload = () => {
     //canvas初期化
     const canvas = document.getElementById("canvas");
-    const ctx = canvas.getContext('2d');
+    ctx = canvas.getContext('2d');
     const map = document.getElementById("whiteMap");
 
     //プロヴィンスマップと白地図を取得
-    provinceMap = new ImageDataController(createImageData(document.getElementById("provinceMap")));
-    politicalMap = new ImageDataController(createImageData(document.getElementById("whiteMap")));
+    provinceMap = new ImageDataController(ImageDataController.createImageData(document.getElementById("provinceMap")));
+    politicalMap = new ImageDataController(ImageDataController.createImageData(document.getElementById("whiteMap")));
 
     //canvas要素に対してドラッグを可能にします
     const canvasDC = new DragController(canvas, fillstart2, moveMap);
@@ -52,8 +53,8 @@ onload = () => {
         }
 
         //国情報更新
-        if (myCountryId != null) { //自国が選択済みならば            
-            const responce = sqlRequest("SELECT money FROM country WHERE countryId=" + myCountryId + " AND timestamp>" + cLastTime);
+        if (myCountry != null) { //自国が選択済みならば            
+            const responce = sqlRequest("SELECT money FROM country WHERE countryId=" + myCountry.id + " AND timestamp>" + cLastTime);
             if (responce.length < 1) return;
             if (responce.length > -1) cLastTime = now(); //responceと無理やり同期させる
             console.log(responce);
@@ -76,47 +77,51 @@ onload = () => {
     function fillstart2() {
         fillstart(canvasDC.startMouseX - canvas.offsetLeft, canvasDC.startMouseY - canvas.offsetTop);
     }
+}
 
-    function fillstart(mouseX, mouseY) {
-        //この時点でselectingProvinceには、前にクリックしたプロヴィンスの情報が入っている
-        if (selectingProvince != null) {
-            let owner = getOwner(selectingProvince.r, selectingProvince.g, selectingProvince.b);
-            if (owner !== null) politicalMap.fill(provinceMap, selectingProvince.x, selectingProvince.y, owner.r, owner.g, owner.b); //ここのlastXとlastYをどうにかする
-            else politicalMap.fill(provinceMap, selectingProvince.x, selectingProvince.y, 255, 255, 255);
-        }
+function fillstart(mouseX, mouseY) {
+    const x = mouseX - mapX, y = mouseY - mapY;
+    let [r, g, b] = provinceMap.getColor(x, y);
+    if (r == 0 && g == 0 && b == 0) return; //境界線をクリックした場合は以前のマスを選択したままになる
 
-        //選択しているマスの情報を更新します
-        //x,yにはマップ上での座標が代入されます
-        const x = mouseX - mapX, y = mouseY - mapY;
-        let [r, g, b] = provinceMap.getColor(x, y);
-        selectingProvince = new Province(x, y, r, g, b);
-        politicalMap.fill(provinceMap, x, y, 255, 0, 0); //マスを赤く塗る
-        ctx.putImageData(politicalMap.imageData, mapX, mapY);
-        if (annexMode == 1) annexProvince();
-
-        //宣戦布告ボタンを一度無効にする
-        document.getElementById("declareWar").disabled = true;
-
-        //選択しているマスの情報を表示する
-
-        selectingProvinceColor = { "r": r, "g": g, "b": b };
-
-        let owner = getOwner(r, g, b);
-        if (owner === null) {
-            targetCountryId = null;
-            document.getElementById("targetCountryFlag").src = "img/255.255.255.png";
-            document.getElementById("targetCountryName").innerText = "領有国なし";
-            document.getElementById("targetMoney").innerText = "???";
-            document.getElementById("targetMilitary").innerText = "???";
-            return;
-        }
-        targetCountryId = owner.countryId;
-        document.getElementById("targetCountryFlag").src = "img/" + owner.r + "." + owner.g + "." + owner.b + ".png";
-        document.getElementById("targetCountryName").innerText = owner.name;
-        document.getElementById("targetMoney").innerText = owner.money;
-        document.getElementById("targetMilitary").innerText = owner.military;
-        if (myCountryId !== null && myCountryId !== targetCountryId) document.getElementById("declareWar").disabled = false;
+    //この時点でselectingProvinceには、前にクリックしたプロヴィンスの情報が入っている
+    if (selectingProvince != null) {
+        let owner = getOwner(selectingProvince.r, selectingProvince.g, selectingProvince.b);
+        if (owner !== null) politicalMap.fill(provinceMap, selectingProvince.x, selectingProvince.y, owner.r, owner.g, owner.b); //ここのlastXとlastYをどうにかする
+        else politicalMap.fill(provinceMap, selectingProvince.x, selectingProvince.y, 255, 255, 255);
     }
+
+    //選択しているマスの情報を更新します
+    //x,yにはマップ上での座標が代入されます
+    selectingProvince = new Province(x, y, r, g, b);
+    politicalMap.fill(provinceMap, x, y, 255, 0, 0); //マスを赤く塗る
+    //地図を更新します
+    ctx.putImageData(politicalMap.imageData, mapX, mapY);
+    //併合モードが有効な場合は併合します
+    if (annexMode == 1) annexProvince();
+
+    //宣戦布告ボタンを一度無効にする
+    document.getElementById("declareWar").disabled = true;
+
+    //選択しているマスの情報を表示する
+
+    let owner = getOwner(r, g, b);
+    if (owner === null) {
+        targetCountry = null;
+        document.getElementById("targetCountryFlag").src = "img/255.255.255.png";
+        document.getElementById("targetCountryName").innerText = "領有国なし";
+        document.getElementById("targetMoney").innerText = "???";
+        document.getElementById("targetMilitary").innerText = "???";
+        document.getElementById("select").disabled = true;
+        return;
+    }
+    targetCountry = new Country(owner);
+    document.getElementById("select").disabled = false;
+    document.getElementById("targetCountryFlag").src = "img/" + owner.r + "." + owner.g + "." + owner.b + ".png";
+    document.getElementById("targetCountryName").innerText = owner.name;
+    document.getElementById("targetMoney").innerText = owner.money;
+    document.getElementById("targetMilitary").innerText = owner.military;
+    if (myCountry !== null && myCountry.id !== targetCountry.id) document.getElementById("declareWar").disabled = false;
 }
 
 function createCountry() {
@@ -138,32 +143,15 @@ function createCountry() {
         return;
     }
     sqlRequest("INSERT INTO `country` (`name`, `r`, `g`, `b`, `money`, `timestamp`) VALUES ('" + document.getElementById("mcName").value + "', " + r + ", " + g + ", " + b + " , 0, NOW())");
-    myCountryId = sqlRequest("SELECT countryId from country order by countryId desc limit 1")[0].countryId; //最新のidを取得
+    myCountry = new Country(sqlRequest("SELECT * from country order by countryId desc limit 1")[0]); //最新のidを取得
     annexProvince();
     politicalMap.fill(provinceMap, nx - mapX, ny - mapY, r, g, b);
     ctx.putImageData(politicalMap.imageData, mapX, mapY);
     selectCountry();
 }
 
-function selectCountry() {
-    const owner = getOwner(selectingProvince.r, selectingProvince.g, selectingProvince.b);
-    console.log(owner);
-    if (owner === null) return; //領有国情報が見つからなかったらreturn
-
-    document.getElementById("text").innerText = "外交の時間だ！"
-    myCountryId = owner.countryId;
-    myCountryColor = [owner.r, owner.g, owner.b];
-    document.getElementById("myCountryFlag").src = "img/" + owner.r + "." + owner.g + "." + owner.b + ".png";
-    document.getElementById("myCountryName").innerText = owner.name;
-    document.getElementById("money").innerText = owner.money;
-    document.getElementById("military").innerText = owner.military;
-    document.getElementById("expandArmy").disabled = false;
-    document.getElementById("disarm").disabled = false;
-    document.getElementById("annex").disabled = false;
-}
-
 function annexProvince() { //選択しているマスを選択している国で併合します
-    if (myCountryId == null) return;
+    if (myCountry == null) return;
 
     const [pr, pg, pb] = provinceMap.getColor(nx - mapX, ny - mapY);
     if (pr == 0 && pg == 0 && pb == 0) {
@@ -171,11 +159,11 @@ function annexProvince() { //選択しているマスを選択している国で
         return;
     }
     if (isOwned(pr, pg, pb)) {
-        sqlRequest("UPDATE province SET countryId=" + myCountryId + ",timestamp=NOW() WHERE r=" + pr + " AND g=" + pg + " AND b=" + pb);
+        sqlRequest("UPDATE province SET countryId=" + myCountry.id + ",timestamp=NOW() WHERE r=" + pr + " AND g=" + pg + " AND b=" + pb);
     } else {
-        sqlRequest("INSERT INTO `province` (`x`, `y`, `r`, `g`, `b`, `timestamp`, `countryId`) VALUES (" + (nx - mapX) + ", " + (ny - mapY) + ", " + pr + ", " + pg + ", " + pb + ", NOW(), " + myCountryId + ")");
+        sqlRequest("INSERT INTO `province` (`x`, `y`, `r`, `g`, `b`, `timestamp`, `countryId`) VALUES (" + (nx - mapX) + ", " + (ny - mapY) + ", " + pr + ", " + pg + ", " + pb + ", NOW(), " + myCountry.id + ")");
     }
-    politicalMap.fill(provinceMap, nx - mapX, ny - mapY, myCountryColor[0], myCountryColor[1], myCountryColor[2]);
+    politicalMap.fill(provinceMap, nx - mapX, ny - mapY, myCountry.r, myCountry.g, myCountry.b);
     ctx.putImageData(politicalMap.imageData, mapX, mapY);
 }
 
@@ -193,7 +181,7 @@ function isOwned(r, g, b) {
 }
 
 function switchAnnexMode() {
-    if (myCountryId == null) return; //国が未選択だったら何もしない
+    if (myCountry == null) return; //国が未選択だったら何もしない
     annexMode = 1 - annexMode;
     //console.log(annexMode);
     if (annexMode === 1) {
@@ -201,36 +189,6 @@ function switchAnnexMode() {
         return;
     }
     document.getElementById("annex").innerText = "併合開始";
-}
-
-function expandArmy() { //軍を拡大
-    let military = parseInt(document.getElementById("military").innerText);
-    document.getElementById("military").innerText = ++military;
-    document.getElementById("disarm").disabled = false;
-    sqlRequest("UPDATE country SET timestamp=NOW(),military=" + military + " WHERE countryId=" + myCountryId);
-}
-
-function disarm() { //軍縮
-    let military = parseInt(document.getElementById("military").innerText);
-    if (military <= 0) {
-        document.getElementById("text").innerText = "これ以上軍縮はできません";
-        document.getElementById("disarm").disabled = true;
-        return;
-    }
-    document.getElementById("military").innerText = --military;
-    sqlRequest("UPDATE country SET timestamp=NOW(),military=" + military + " WHERE countryId=" + myCountryId);
-}
-
-function declareWar() { //宣戦布告
-    if (myCountryId == null || targetCountryId == null || myCountryId == targetCountryId) return;
-    const request = sqlRequest("SELECT * FROM war WHERE ((countryIdA='" + myCountryId + "' AND countryIdB='" + targetCountryId + "') OR (countryIdA='" + targetCountryId + "'AND countryIdB='" + myCountryId + "'))");
-    console.log(request);
-    if (request.length > 0) {
-        document.getElementById("text").innerText = "すでに戦争状態です。";
-        return;
-    }
-    document.getElementById("text").innerText = "宣戦布告しました！";
-    sqlRequest("INSERT INTO war VALUES (" + myCountryId + "," + targetCountryId + ")");
 }
 
 function now() { //yyyymmddhhmmss形式の現在の日付時刻を取得
@@ -248,22 +206,6 @@ function now() { //yyyymmddhhmmss形式の現在の日付時刻を取得
     return "" + time.getFullYear() + month + date + hour + minute + second;
 }
 
-function csvToArray(path) { //CSVを配列に
-    var csvData = new Array();
-    var data = new XMLHttpRequest();
-    data.open("GET", path, false);
-    data.send(null);
-    var LF = String.fromCharCode(10);
-    var lines = data.responseText.split(LF);
-    for (let i = 1; i < lines.length; ++i) { //1行目をスキップ
-        let cells = lines[i].split(",");
-        if (cells.length != 1) {
-            csvData.push(cells);
-        }
-    }
-    return csvData;
-}
-
 function requestPhp(command, path, data) {
     const request = new XMLHttpRequest();
     request.open("POST", "main.php", false);
@@ -279,18 +221,6 @@ function sqlRequest(state = "") {
         list.push(JSON.parse(result[i]));
     }
     return list;
-}
-
-function createImageData(img) {
-    //5616✕2160の画像を生成
-    const IMG_WIDTH = 5616, IMG_HEIGHT = 2160;
-    const cv = document.createElement('canvas');
-    cv.width = img.naturalWidth;
-    cv.height = img.naturalHeight;
-    var ct = cv.getContext('2d');
-    ct.drawImage(img, 0, 0);
-    var data = ct.getImageData(0, 0, cv.width, cv.height);
-    return data;
 }
 
 function test() {
@@ -313,9 +243,72 @@ class Province {
     }
 }
 
+class Country {
+    constructor(sqlResponceObject) {
+        this.id = sqlResponceObject.countryId;
+        this.name = sqlResponceObject.name;
+        this.r = sqlResponceObject.r;
+        this.g = sqlResponceObject.g;
+        this.b = sqlResponceObject.b;
+        this.money = sqlResponceObject.money;
+        this.military = sqlResponceObject.military;
+    }
+
+    expandArmy() { //軍を拡大
+        document.getElementById("military").innerText = ++this.military;
+        document.getElementById("disarm").disabled = false;
+        sqlRequest("UPDATE country SET timestamp=NOW(),military=" + this.military + " WHERE countryId=" + this.id);
+    }
+
+    disarm() { //軍縮
+        if (this.military <= 0) {
+            document.getElementById("text").innerText = "これ以上軍縮はできません";
+            document.getElementById("disarm").disabled = true;
+            return;
+        }
+        document.getElementById("military").innerText = --this.military;
+        sqlRequest("UPDATE country SET timestamp=NOW(),military=" + this.military + " WHERE countryId=" + this.id);
+    }
+
+    declareWar(target) { //宣戦布告
+        if (target.id == null || this.id == target.id) return; //対象が存在しないか、自国が存在しなければ宣戦布告はできない
+        const request = sqlRequest("SELECT * FROM war WHERE ((countryIdA='" + this.id + "' AND countryIdB='" + target.id + "') OR (countryIdA='" + target.id + "'AND countryIdB='" + this.id + "'))");
+        console.log(request);
+        if (request.length > 0) {
+            document.getElementById("text").innerText = "すでに戦争状態です。";
+            return;
+        }
+        document.getElementById("text").innerText = "宣戦布告しました！";
+        sqlRequest("INSERT INTO war VALUES (" + this.id + "," + target.id + ")");
+    }
+
+    //国を自国として設定します
+    select() {
+        myCountry = this;
+        document.getElementById("text").innerText = "外交の時間だ！"
+        document.getElementById("myCountryFlag").src = "img/" + this.r + "." + this.g + "." + this.b + ".png";
+        document.getElementById("myCountryName").innerText = this.name;
+        document.getElementById("money").innerText = this.money;
+        document.getElementById("military").innerText = this.military;
+        document.getElementById("expandArmy").disabled = false;
+        document.getElementById("disarm").disabled = false;
+        document.getElementById("annex").disabled = false;
+    }
+}
+
 class ImageDataController {
     constructor(imageData = new ImageData()) {
         this.imageData = imageData;
+    }
+
+    static createImageData(img) {
+        const cv = document.createElement('canvas');
+        cv.width = img.naturalWidth;
+        cv.height = img.naturalHeight;
+        var ct = cv.getContext('2d');
+        ct.drawImage(img, 0, 0);
+        var data = ct.getImageData(0, 0, cv.width, cv.height);
+        return data;
     }
 
     getPixelOffset(x, y) { //座標からデータが格納されている番号を取得します
