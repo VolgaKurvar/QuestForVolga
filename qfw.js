@@ -1,6 +1,6 @@
 "use strict";
 
-const FILL_SIZE = 150;
+const FILL_SIZE = 350;
 let provinceMap = null, politicalMap = null;
 let mapX = -2500, mapY = -300, annexMode = 0, pLastTime = 0, cLastTime = 0, myCountry = null, targetCountry = null;
 let selectingProvince = null;
@@ -10,11 +10,11 @@ onload = () => {
     //canvas初期化
     const canvas = document.getElementById("canvas");
     ctx = canvas.getContext('2d');
-    map = document.getElementById("whiteMap");
+    map = document.getElementById("politicalMap");
 
     //プロヴィンスマップと白地図を取得
     provinceMap = new ImageDataController(document.getElementById("provinceMap"));
-    politicalMap = new ImageDataController(document.getElementById("whiteMap"));
+    politicalMap = new ImageDataController(document.getElementById("politicalMap"));
 
     //canvas要素に対してドラッグを可能にします
     canvasDC = new DragController(canvas, () => {
@@ -162,6 +162,7 @@ function sqlRequest(state = "") {
 }
 
 function test() {
+    politicalMap.download();
     //resize(1, 1);
     //localStorage.clear();
     //console.log(sqlRequest("SELECT * FROM war"));
@@ -344,6 +345,19 @@ class ImageDataController {
         //内部キャンバスのデータを更新し、それを返します
         this.ctx.putImageData(this.imageData, 0, 0);
         return this.canvas;
+    }
+
+    download() {
+        //マスを選択済みだったら元の色に戻す
+        if (selectingProvince != null) {
+            const owner = selectingProvince.getOwner();
+            if (owner !== null) this.fill(provinceMap, selectingProvince.x, selectingProvince.y, owner.r, owner.g, owner.b);
+            else this.fill(provinceMap, selectingProvince.x, selectingProvince.y, 255, 255, 255);
+        }
+        let link = document.createElement("a");
+        link.href = this.updateCanvas().toDataURL("image/png");
+        link.download = "test.png";
+        link.click();
     }
 }
 

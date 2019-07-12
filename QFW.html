@@ -21,7 +21,7 @@
             現在まったりと制作中です。</p>
         <hr>-->
         <img id="provinceMap" style="display: none" src="map.png">
-        <img id="whiteMap" style="display: none" src="whiteMap.png">
+        <img id="politicalMap" style="display: none" src="img/politicalMap.png">
     </div>
     <div id="middle" style="width:100%;">
         <div id="topbar" style="width: 100%;height: 15%;">
@@ -68,6 +68,7 @@
             <button id="disarm" onclick="myCountry.disarm()" disabled>軍縮する</button>
             <button id="upScale" onclick="resize(2,2)">拡大</button>
             <button id="downScale" onclick="resize(0.5,0.5)">縮小</button>
+            <button onclick="politicalMap.download()">地図DL</button>
             <button onclick="test()">怪しい</button>
         </div>
     </div>
