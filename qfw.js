@@ -4,13 +4,13 @@ const FILL_SIZE = 150;
 let provinceMap = null, politicalMap = null;
 let mapX = -2500, mapY = -300, annexMode = 0, pLastTime = 0, cLastTime = 0, myCountry = null, targetCountry = null;
 let selectingProvince = null;
-let ctx, canvasDC, scale = 1;
+let ctx, canvasDC, scale = 1, map;
 
 onload = () => {
     //canvas初期化
     const canvas = document.getElementById("canvas");
     ctx = canvas.getContext('2d');
-    const map = document.getElementById("whiteMap");
+    map = document.getElementById("whiteMap");
 
     //プロヴィンスマップと白地図を取得
     provinceMap = new ImageDataController(document.getElementById("provinceMap"));
@@ -20,13 +20,9 @@ onload = () => {
     canvasDC = new DragController(canvas, () => {
         fillstart(canvasDC.startMouseX - canvas.offsetLeft, canvasDC.startMouseY - canvas.offsetTop)
     }, () => {
-        mapX += canvasDC.latestMouseX - canvasDC.oldMouseX;
-        mapY += canvasDC.latestMouseY - canvasDC.oldMouseY;
-        if (mapX > 0) mapX = 0;
-        else if (mapX - canvas.width < -1 * map.width) mapX = -1 * map.width + canvas.width;
-        if (mapY > 0) mapY = 0;
-        else if (mapY - canvas.height < -1 * map.height) mapY = -1 * map.height + canvas.height;
-        ctx.drawImage(politicalMap.canvas, mapX, mapY);
+        mapX += (canvasDC.latestMouseX - canvasDC.oldMouseX) / scale;
+        mapY += (canvasDC.latestMouseY - canvasDC.oldMouseY) / scale;
+        fixMapOffset();
     });
 
     //ランダムな色を設定
@@ -76,7 +72,7 @@ onload = () => {
 }
 
 function fillstart(mouseX, mouseY) {
-    const x = Math.floor(mouseX / scale) - mapX, y = Math.floor(mouseY / scale) - mapY;
+    const x = Math.floor(mouseX / scale - mapX), y = Math.floor(mouseY / scale - mapY);
     let [r, g, b] = provinceMap.getColor(x, y);
     if (r == 0 && g == 0 && b == 0) return; //境界線をクリックした場合は以前のマスを選択したままになる
 
@@ -177,9 +173,19 @@ function test() {
 }
 
 function resize(scaleArg) {
+    if (scale <= 0.5 && scaleArg < 1) return;
     scale *= scaleArg;
+    console.log("scale=" + scale);
     ctx.scale(scaleArg, scaleArg);
-    ctx.drawImage(politicalMap.updateCanvas(), mapX, mapY);
+    fixMapOffset();
+}
+
+function fixMapOffset() {
+    if (mapX > 0) mapX = 0;
+    else if ((mapX + map.width) * scale < canvas.width) mapX = canvas.width / scale - map.width;
+    if (mapY > 0) mapY = 0;
+    else if ((mapY + map.height) * scale < canvas.height) mapY = canvas.height / scale - map.height;
+    ctx.drawImage(politicalMap.canvas, mapX, mapY);
 }
 
 class Province {
