@@ -4,7 +4,7 @@ const FILL_SIZE = 150;
 let provinceMap = null, politicalMap = null;
 let mapX = -2500, mapY = -300, annexMode = 0, pLastTime = 0, cLastTime = 0, myCountry = null, targetCountry = null;
 let selectingProvince = null;
-let ctx, canvasDC;
+let ctx, canvasDC, scale = 1;
 
 onload = () => {
     //canvas初期化
@@ -13,8 +13,8 @@ onload = () => {
     const map = document.getElementById("whiteMap");
 
     //プロヴィンスマップと白地図を取得
-    provinceMap = new ImageDataController(ImageDataController.createImageData(document.getElementById("provinceMap")));
-    politicalMap = new ImageDataController(ImageDataController.createImageData(document.getElementById("whiteMap")));
+    provinceMap = new ImageDataController(document.getElementById("provinceMap"));
+    politicalMap = new ImageDataController(document.getElementById("whiteMap"));
 
     //canvas要素に対してドラッグを可能にします
     canvasDC = new DragController(canvas, () => {
@@ -26,7 +26,7 @@ onload = () => {
         else if (mapX - canvas.width < -1 * map.width) mapX = -1 * map.width + canvas.width;
         if (mapY > 0) mapY = 0;
         else if (mapY - canvas.height < -1 * map.height) mapY = -1 * map.height + canvas.height;
-        ctx.putImageData(politicalMap.imageData, mapX, mapY);
+        ctx.drawImage(politicalMap.canvas, mapX, mapY);
     });
 
     //ランダムな色を設定
@@ -48,7 +48,7 @@ onload = () => {
     for (const i of sqlRequest("SELECT x,y,country.r,country.g,country.b FROM province INNER JOIN country ON province.countryId=country.countryId")) {
         politicalMap.fill(provinceMap, parseInt(i.x), parseInt(i.y), parseInt(i.r), parseInt(i.g), parseInt(i.b));
     }
-    ctx.putImageData(politicalMap.imageData, mapX, mapY);
+    ctx.drawImage(politicalMap.updateCanvas(), mapX, mapY);
 
     setInterval(() => {
         //地図更新
@@ -59,7 +59,7 @@ onload = () => {
             for (const i of responce) {
                 politicalMap.fill(provinceMap, parseInt(i.x), parseInt(i.y), parseInt(i.r), parseInt(i.g), parseInt(i.b));
             }
-            ctx.putImageData(politicalMap.imageData, mapX, mapY);
+            ctx.drawImage(politicalMap.updateCanvas(), mapX, mapY);
         }
 
         //国情報更新
@@ -76,7 +76,7 @@ onload = () => {
 }
 
 function fillstart(mouseX, mouseY) {
-    const x = mouseX - mapX, y = mouseY - mapY;
+    const x = Math.floor(mouseX / scale) - mapX, y = Math.floor(mouseY / scale) - mapY;
     let [r, g, b] = provinceMap.getColor(x, y);
     if (r == 0 && g == 0 && b == 0) return; //境界線をクリックした場合は以前のマスを選択したままになる
 
@@ -92,7 +92,7 @@ function fillstart(mouseX, mouseY) {
     selectingProvince = new Province(x, y, r, g, b);
     politicalMap.fill(provinceMap, x, y, 255, 0, 0); //マスを赤く塗る
     //地図を更新します
-    ctx.putImageData(politicalMap.imageData, mapX, mapY);
+    ctx.drawImage(politicalMap.updateCanvas(), mapX, mapY);
     //併合モードが有効な場合は併合します
     if (annexMode == 1) myCountry.annexProvince(selectingProvince);
 
@@ -166,6 +166,7 @@ function sqlRequest(state = "") {
 }
 
 function test() {
+    //resize(1, 1);
     //localStorage.clear();
     //console.log(sqlRequest("SELECT * FROM war"));
     //最新のプロヴィンス情報を取得↓
@@ -173,6 +174,12 @@ function test() {
     //UPDATE province SET countryId=2,timestamp=NOW() WHERE r=207 AND g=223 AND b=223;
     //SELECT countryId,name from country order by countryId desc limit 3
     //(Math.floor(Math.random() * 40) + 1)
+}
+
+function resize(scaleArg) {
+    scale *= scaleArg;
+    ctx.scale(scaleArg, scaleArg);
+    ctx.drawImage(politicalMap.updateCanvas(), mapX, mapY);
 }
 
 class Province {
@@ -212,7 +219,7 @@ class Province {
         const country = new Country(sqlRequest("SELECT * from country order by countryId desc limit 1")[0]); //最新のidを取得
         country.annexProvince(this);
         politicalMap.fill(provinceMap, this.x, this.x, r, g, b);
-        ctx.putImageData(politicalMap.imageData, mapX, mapY);
+        ctx.drawImage(politicalMap.updateCanvas(), mapX, mapY);
         return country;
     }
 }
@@ -277,23 +284,21 @@ class Country {
             sqlRequest("INSERT INTO `province` (`x`, `y`, `r`, `g`, `b`, `timestamp`, `countryId`) VALUES (" + province.x + ", " + province.y + ", " + province.r + ", " + province.g + ", " + province.b + ", NOW(), " + this.id + ")");
         }
         politicalMap.fill(provinceMap, province.x, province.y, this.r, this.g, this.b);
-        ctx.putImageData(politicalMap.imageData, mapX, mapY);
+        ctx.drawImage(politicalMap.updateCanvas(), mapX, mapY);
     }
 }
 
 class ImageDataController {
-    constructor(imageData = new ImageData()) {
-        this.imageData = imageData;
-    }
-
-    static createImageData(img) {
-        const cv = document.createElement('canvas');
-        cv.width = img.naturalWidth;
-        cv.height = img.naturalHeight;
-        var ct = cv.getContext('2d');
-        ct.drawImage(img, 0, 0);
-        var data = ct.getImageData(0, 0, cv.width, cv.height);
-        return data;
+    //imageData:操作対象のimageDataオブジェクト
+    //canvas:内部キャンバス
+    //ctx:内部キャンバスのコンテキスト
+    constructor(img) {
+        this.canvas = document.createElement('canvas');
+        this.canvas.width = img.naturalWidth;
+        this.canvas.height = img.naturalHeight;
+        this.ctx = this.canvas.getContext('2d');
+        this.ctx.drawImage(img, 0, 0);
+        this.imageData = this.ctx.getImageData(0, 0, img.naturalWidth, img.naturalHeight);
     }
 
     getPixelOffset(x, y) { //座標からデータが格納されている番号を取得します
@@ -327,6 +332,12 @@ class ImageDataController {
                 }
             }
         }
+    }
+
+    updateCanvas() {
+        //内部キャンバスのデータを更新し、それを返します
+        this.ctx.putImageData(this.imageData, 0, 0);
+        return this.canvas;
     }
 }
 
