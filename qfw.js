@@ -51,6 +51,7 @@ onload = () => {
         let responce = sqlRequest("SELECT x,y,r,g,b FROM (SELECT x,y,countryId FROM province where timestamp>" + pLastTime + " ORDER BY timestamp DESC) AS province2 INNER JOIN country ON province2.countryId=country.countryId");
         if (responce.length >= 1) { //プロヴィンスに関して更新があったら
             if (responce.length > -1) pLastTime = now(); //responceと無理やり同期させる
+            console.log("更新あり！");
             console.log(responce);
             for (const i of responce) {
                 politicalMap.fill(provinceMap, parseInt(i.x), parseInt(i.y), parseInt(i.r), parseInt(i.g), parseInt(i.b));
@@ -86,14 +87,14 @@ function fillstart(mouseX, mouseY) {
     //選択しているマスの情報を更新します
     //x,yにはマップ上での座標が代入されます
     selectingProvince = new Province(x, y, r, g, b);
-    politicalMap.fill(provinceMap, x, y, 255, 0, 0); //マスを赤く塗る
+
+    //併合モードが有効な場合は併合します
+    //テスト用の変数
+    if (annexMode == 1) myCountry.annexProvince(selectingProvince);
+    else politicalMap.fill(provinceMap, x, y, 255, 0, 0); //併合モードが有効でない場合はマスを赤く塗る
+
     //地図を更新します
     ctx.drawImage(politicalMap.updateCanvas(), mapX, mapY);
-    //併合モードが有効な場合は併合します
-    if (annexMode == 1) myCountry.annexProvince(selectingProvince);
-
-    //宣戦布告ボタンを一度無効にする
-    document.getElementById("declareWar").disabled = true;
 
     //選択しているマスの情報を表示する
 
@@ -106,6 +107,7 @@ function fillstart(mouseX, mouseY) {
         document.getElementById("targetMilitary").innerText = "???";
         document.getElementById("create").disabled = false;
         document.getElementById("select").disabled = true;
+        document.getElementById("declareWar").disabled = true;
         return;
     }
     targetCountry = new Country(owner);
@@ -116,6 +118,7 @@ function fillstart(mouseX, mouseY) {
     document.getElementById("targetMoney").innerText = owner.money;
     document.getElementById("targetMilitary").innerText = owner.military;
     if (myCountry !== null && myCountry.id !== targetCountry.id) document.getElementById("declareWar").disabled = false;
+    else document.getElementById("declareWar").disabled = true;
 }
 
 function switchAnnexMode() {
@@ -153,16 +156,19 @@ function requestPhp(command, path, data) {
 }
 
 function sqlRequest(state = "") {
+    const startTime = (new Date).getTime();
     const result = requestPhp("sql", "", state).split("error")[0].split("\n"); //なぜかついてくるerrorを除去
     let list = [];
     for (let i = 0; i < result.length - 1; i++) { //配列の最後は空行なので飛ばす
         list.push(JSON.parse(result[i]));
     }
+    console.log("リクエスト処理：" + (((new Date).getTime() - startTime) / 1000) + "秒");
     return list;
 }
 
 function test() {
-    politicalMap.download();
+    console.log("自国の色：" + myCountry.r + "." + myCountry.g + "." + myCountry.b);
+    //politicalMap.download();
     //resize(1, 1);
     //localStorage.clear();
     //console.log(sqlRequest("SELECT * FROM war"));
@@ -291,7 +297,6 @@ class Country {
             sqlRequest("INSERT INTO `province` (`x`, `y`, `r`, `g`, `b`, `timestamp`, `countryId`) VALUES (" + province.x + ", " + province.y + ", " + province.r + ", " + province.g + ", " + province.b + ", NOW(), " + this.id + ")");
         }
         politicalMap.fill(provinceMap, province.x, province.y, this.r, this.g, this.b);
-        ctx.drawImage(politicalMap.updateCanvas(), mapX, mapY);
     }
 }
 
