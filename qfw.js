@@ -41,6 +41,7 @@ onload = () => {
     //地図生成
     pLastTime = now();
     cLastTime = now();
+
     for (const i of sqlRequest("SELECT x,y,country.r,country.g,country.b FROM province INNER JOIN country ON province.countryId=country.countryId")) {
         politicalMap.fill(provinceMap, parseInt(i.x), parseInt(i.y), parseInt(i.r), parseInt(i.g), parseInt(i.b));
     }
@@ -60,7 +61,7 @@ onload = () => {
         }
 
         //国情報更新
-        if (myCountry != null) { //自国が選択済みならば            
+        if (myCountry != null) { //自国が選択済みならば
             const responce = sqlRequest("SELECT money FROM country WHERE countryId=" + myCountry.id + " AND timestamp>" + cLastTime);
             if (responce.length < 1) return;
             if (responce.length > -1) cLastTime = now(); //responceと無理やり同期させる

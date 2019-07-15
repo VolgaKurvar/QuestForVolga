@@ -2,7 +2,7 @@
 //キーの重複などでSQLエラーが出ることがある
 
 try {
-    $pdo = new PDO('mysql:host=mysql1.php.xdomain.ne.jp;dbname=kurvan1112_qfv;charset=utf8','kurvan1112_db','mriz1112',
+    $pdo = new PDO('mysql:host=localhost;dbname=volga;charset=utf8','volga','mriz1112',
     array(PDO::ATTR_EMULATE_PREPARES => false));
 } catch (PDOException $e) {
     exit('データベース接続失敗。'.$e->getMessage());
