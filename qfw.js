@@ -112,7 +112,7 @@ function fillstart(mouseX, mouseY) {
         return;
     }
     targetCountry = new Country(owner);
-    document.getElementById("create").disabled = true;
+    document.getElementById("create").disabled = false;
     document.getElementById("select").disabled = false;
     document.getElementById("targetCountryFlag").src = "img/" + owner.r + "." + owner.g + "." + owner.b + ".png";
     document.getElementById("targetCountryName").innerText = owner.name;
@@ -223,10 +223,6 @@ class Province {
         const b = parseInt(color.substring(5, 7), 16);
         if (sqlRequest("SELECT * FROM country WHERE (r=" + r + " AND g=" + g + " AND b=" + b).length > 0) {
             alert("同じ色か同じ名前を使用している国家が既に存在します");
-            return;
-        }
-        if (this.isOwned()) {
-            alert("そのプロヴィンスは既に領有されています");
             return;
         }
         sqlRequest("INSERT INTO `country` (`name`, `r`, `g`, `b`, `money`, `timestamp`) VALUES ('" + document.getElementById("mcName").value + "', " + r + ", " + g + ", " + b + " , 0, NOW())");
