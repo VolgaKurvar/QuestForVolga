@@ -114,7 +114,7 @@ function fillstart(mouseX, mouseY) {
     targetCountry = new Country(owner);
     document.getElementById("create").disabled = false;
     document.getElementById("select").disabled = false;
-    document.getElementById("targetCountryFlag").src = "img/" + owner.r + "." + owner.g + "." + owner.b + ".png";
+    document.getElementById("targetCountryFlag").src = "img/" + owner.countryId + ".png";
     document.getElementById("targetCountryName").innerText = owner.name;
     document.getElementById("targetMoney").innerText = owner.money;
     document.getElementById("targetMilitary").innerText = owner.military;
