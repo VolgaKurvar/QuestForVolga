@@ -277,7 +277,7 @@ class Country {
     select() {
         myCountry = this;
         document.getElementById("text").innerText = "外交の時間だ！"
-        document.getElementById("myCountryFlag").src = "img/" + this.r + "." + this.g + "." + this.b + ".png";
+        document.getElementById("myCountryFlag").src = "img/" + this.id + ".png";
         document.getElementById("myCountryName").innerText = this.name;
         document.getElementById("money").innerText = this.money;
         document.getElementById("military").innerText = this.military;
