@@ -69,6 +69,13 @@ switch ($_POST['command']) {
         while($row = $stmt -> fetch(PDO::FETCH_ASSOC)) {
             echo json_encode($row)."\n";
         }
+        break;
+    case "updateImg":
+        list($type, $data) = explode(';', $_POST['data']);
+        list(, $data)      = explode(',', $data);
+        //PHPのデコードでは、+がスペースに置き換わってしまうので戻す
+        file_put_contents($_POST['path'], base64_decode(str_replace(" ","+",$data)));
+        break;
     default:
         print("error");
         break;
