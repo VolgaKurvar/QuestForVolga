@@ -42,6 +42,8 @@ onload = () => {
     pLastTime = now();
     cLastTime = now();
 
+    getUpdate("./img/politicalMap.png");
+
     for (const i of sqlRequest("SELECT x,y,country.r,country.g,country.b FROM province INNER JOIN country ON province.countryId=country.countryId")) {
         politicalMap.fill(provinceMap, parseInt(i.x), parseInt(i.y), parseInt(i.r), parseInt(i.g), parseInt(i.b));
     }
@@ -194,6 +196,36 @@ function fixMapOffset() {
     if (mapY > 0) mapY = 0;
     else if ((mapY + map.height) * scale < canvas.height) mapY = canvas.height / scale - map.height;
     ctx.drawImage(politicalMap.canvas, mapX, mapY);
+}
+
+function getUpdate(fileName) {
+    var obj = createRequest(); //リクエスト
+    if (obj) {
+        //通信実行
+        obj.open("get", fileName);
+        obj.onreadystatechange = function () {
+            //通信完了
+            if (obj.readyState == 4 && obj.status == 200) {
+                //読込後の処理
+                console.log(getResponseHeader("last-modified"));
+            }
+        }
+        obj.send(null);
+    }
+}
+
+//非同期通信オブジェクトの生成
+function createRequest() {
+    try {
+        return new XMLHttpRequest();
+    } catch (e) {
+        try {
+            return new ActiveXObject("Microsoft.XMLHTTP");
+        } catch (e) {
+            return null;
+        }
+    }
+    return null;
 }
 
 class Province {
