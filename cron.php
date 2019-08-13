@@ -1,8 +1,8 @@
 <?php
 //キーの重複などでSQLエラーが出ることがある
-
+require_once 'dbAccount.php';
 try {
-    $pdo = new PDO('mysql:host=localhost;dbname=volga;charset=utf8','volga','mriz1112',
+    $pdo = new PDO('mysql:host=localhost;dbname=volga;charset=utf8',dbUsername,dbPassword,
     array(PDO::ATTR_EMULATE_PREPARES => false));
 } catch (PDOException $e) {
     exit('データベース接続失敗。'.$e->getMessage());

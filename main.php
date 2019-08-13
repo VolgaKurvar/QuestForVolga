@@ -1,4 +1,5 @@
 <?php
+require_once 'dbAccount.php';
 error_reporting(0);
 mb_language("ja");
 mb_internal_encoding('UTF-8');
@@ -52,7 +53,7 @@ switch ($_POST['command']) {
         break;
     case "sql":
         try {
-            $pdo = new PDO('mysql:host=localhost;dbname=volga;charset=utf8','volga','mriz1112',
+            $pdo = new PDO('mysql:host=localhost;dbname=volga;charset=utf8',dbUsername,dbPassword,
             array(PDO::ATTR_EMULATE_PREPARES => false));
         } catch (PDOException $e) {
             exit('データベース接続失敗。'.$e->getMessage());
