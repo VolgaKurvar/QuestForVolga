@@ -186,9 +186,9 @@ function test() {
     //UPDATE province SET countryId=2,timestamp=NOW() WHERE r=207 AND g=223 AND b=223;
     //SELECT countryId,name from country order by countryId desc limit 3
     //(Math.floor(Math.random() * 40) + 1)
-    localStorage.clear();
 }
 
+//地図の拡大率を変更します
 function resize(scaleArg) {
     if (scale <= 0.5 && scaleArg < 1) return;
     scale *= scaleArg;
@@ -197,12 +197,20 @@ function resize(scaleArg) {
     fixMapOffset();
 }
 
+//表示されている地図のオフセットを修正します
 function fixMapOffset() {
     if (mapX > 0) mapX = 0;
     else if ((mapX + map.width) * scale < canvas.width) mapX = canvas.width / scale - map.width;
     if (mapY > 0) mapY = 0;
     else if ((mapY + map.height) * scale < canvas.height) mapY = canvas.height / scale - map.height;
     ctx.drawImage(politicalMap.canvas, mapX, mapY);
+}
+
+//サーバー上の地図画像を更新します
+function updateMapFile() {
+    requestPhp("updateImg", "./img/politicalMap.png", politicalMap.getDataURL());
+    //データベース上に登録されている政治地図ファイル最終更新日時を更新
+    sqlRequest("UPDATE info SET politicalMapLastUpdate=NOW()");
 }
 
 class Province {
@@ -359,16 +367,21 @@ class ImageDataController {
     }
 
     download() {
+        let link = document.createElement("a");
+        link.href = this.getDataURL();
+        link.download = "politicalMap.png";
+        link.click();
+    }
+
+    //地図を発行します
+    getDataURL() {
         //マスを選択済みだったら元の色に戻す
         if (selectingProvince != null) {
             const owner = selectingProvince.getOwner();
             if (owner !== null) this.fill(provinceMap, selectingProvince.x, selectingProvince.y, owner.r, owner.g, owner.b);
             else this.fill(provinceMap, selectingProvince.x, selectingProvince.y, 255, 255, 255);
         }
-        let link = document.createElement("a");
-        link.href = this.updateCanvas().toDataURL("image/png");
-        link.download = "test.png";
-        link.click();
+        return this.updateCanvas().toDataURL("image/png");
     }
 }
 
