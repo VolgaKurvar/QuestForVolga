@@ -12,65 +12,73 @@ onload = () => {
     ctx = canvas.getContext('2d');
     map = document.getElementById("politicalMap");
 
-    //プロヴィンスマップと白地図を取得
-    provinceMap = new ImageDataController(document.getElementById("provinceMap"));
-    politicalMap = new ImageDataController(document.getElementById("politicalMap"));
+    //最新の地図を取得
+    //DB上には政治地図画像ファイルの最終更新日時を登録しておく
+    //DBさえ更新すればつねに最新に近い地図が手に入る
+    const politicalMapLastUpdateDB = sqlRequest("SELECT * FROM info")[0].politicalMapLastUpdate;
+    document.getElementById("politicalMap").src = "img/politicalMap.png?r=" + new Date(politicalMapLastUpdateDB).getTime();
 
-    //canvas要素に対してドラッグを可能にします
-    canvasDC = new DragController(canvas, () => {
-        fillstart(canvasDC.startMouseX - canvas.offsetLeft, canvasDC.startMouseY - canvas.offsetTop)
-    }, () => {
-        mapX += (canvasDC.latestMouseX - canvasDC.oldMouseX) / scale;
-        mapY += (canvasDC.latestMouseY - canvasDC.oldMouseY) / scale;
-        fixMapOffset();
-    });
+    document.getElementById("politicalMap").onload = () => {
+        //プロヴィンスマップと白地図を取得
+        provinceMap = new ImageDataController(document.getElementById("provinceMap"));
+        politicalMap = new ImageDataController(document.getElementById("politicalMap"));
 
-    //ランダムな色を設定
-    document.getElementById("color").value = "#" + Math.floor(Math.random() * 256).toString(16) + Math.floor(Math.random() * 256).toString(16) + Math.floor(Math.random() * 256).toString(16);
+        //canvas要素に対してドラッグを可能にします
+        canvasDC = new DragController(canvas, () => {
+            fillstart(canvasDC.startMouseX - canvas.offsetLeft, canvasDC.startMouseY - canvas.offsetTop)
+        }, () => {
+            mapX += (canvasDC.latestMouseX - canvasDC.oldMouseX) / scale;
+            mapY += (canvasDC.latestMouseY - canvasDC.oldMouseY) / scale;
+            fixMapOffset();
+        });
 
-    //UIのサイズ調整
-    {
-        const targetCountryFlag = document.getElementById("targetCountryFlag");
-        targetCountryFlag.height = Math.round(targetCountryFlag.width * 0.67); //横：縦=3:2
-        document.getElementById("middle").style.height = window.innerHeight - document.getElementById("header").offsetHeight + "px"; //ミドルを可能な限り縦に伸ばす
-        //ウィンドウ幅の7割を地図表示領域とする
-        canvas.width = Math.floor(document.getElementById("middle").offsetWidth * 0.88);
-        canvas.height = Math.floor(window.innerHeight * 0.7);
-    }
+        //ランダムな色を設定
+        document.getElementById("color").value = "#" + Math.floor(Math.random() * 256).toString(16) + Math.floor(Math.random() * 256).toString(16) + Math.floor(Math.random() * 256).toString(16);
 
-    //地図生成
-    pLastTime = now();
-    cLastTime = now();
-
-    for (const i of sqlRequest("SELECT x,y,country.r,country.g,country.b FROM province INNER JOIN country ON province.countryId=country.countryId")) {
-        politicalMap.fill(provinceMap, parseInt(i.x), parseInt(i.y), parseInt(i.r), parseInt(i.g), parseInt(i.b));
-    }
-    ctx.drawImage(politicalMap.updateCanvas(), mapX, mapY);
-
-    setInterval(() => {
-        //地図更新
-        let responce = sqlRequest("SELECT x,y,r,g,b FROM (SELECT x,y,countryId FROM province where timestamp>" + pLastTime + " ORDER BY timestamp DESC) AS province2 INNER JOIN country ON province2.countryId=country.countryId");
-        if (responce.length >= 1) { //プロヴィンスに関して更新があったら
-            if (responce.length > -1) pLastTime = now(); //responceと無理やり同期させる
-            console.log("更新あり！");
-            console.log(responce);
-            for (const i of responce) {
-                politicalMap.fill(provinceMap, parseInt(i.x), parseInt(i.y), parseInt(i.r), parseInt(i.g), parseInt(i.b));
-            }
-            ctx.drawImage(politicalMap.updateCanvas(), mapX, mapY);
+        //UIのサイズ調整
+        {
+            const targetCountryFlag = document.getElementById("targetCountryFlag");
+            targetCountryFlag.height = Math.round(targetCountryFlag.width * 0.67); //横：縦=3:2
+            document.getElementById("middle").style.height = window.innerHeight - document.getElementById("header").offsetHeight + "px"; //ミドルを可能な限り縦に伸ばす
+            //ウィンドウ幅の7割を地図表示領域とする
+            canvas.width = Math.floor(document.getElementById("middle").offsetWidth * 0.88);
+            canvas.height = Math.floor(window.innerHeight * 0.7);
         }
 
-        //国情報更新
-        if (myCountry != null) { //自国が選択済みならば
-            const responce = sqlRequest("SELECT money FROM country WHERE countryId=" + myCountry.id + " AND timestamp>" + cLastTime);
-            if (responce.length < 1) return;
-            if (responce.length > -1) cLastTime = now(); //responceと無理やり同期させる
-            console.log(responce);
-            for (const i of responce) {
-                document.getElementById("money").innerText = i.money;
-            }
+        //地図生成
+        pLastTime = now();
+        cLastTime = now();
+
+        for (const i of sqlRequest("SELECT x,y,country.r,country.g,country.b FROM province INNER JOIN country ON province.countryId=country.countryId WHERE province.timestamp>'" + politicalMapLastUpdateDB + "'")) {
+            politicalMap.fill(provinceMap, parseInt(i.x), parseInt(i.y), parseInt(i.r), parseInt(i.g), parseInt(i.b));
         }
-    }, 10000);
+        ctx.drawImage(politicalMap.updateCanvas(), mapX, mapY);
+
+        setInterval(() => {
+            //地図更新
+            let responce = sqlRequest("SELECT x,y,r,g,b FROM (SELECT x,y,countryId FROM province where timestamp>" + pLastTime + " ORDER BY timestamp DESC) AS province2 INNER JOIN country ON province2.countryId=country.countryId");
+            if (responce.length >= 1) { //プロヴィンスに関して更新があったら
+                if (responce.length > -1) pLastTime = now(); //responceと無理やり同期させる
+                console.log("更新あり！");
+                console.log(responce);
+                for (const i of responce) {
+                    politicalMap.fill(provinceMap, parseInt(i.x), parseInt(i.y), parseInt(i.r), parseInt(i.g), parseInt(i.b));
+                }
+                ctx.drawImage(politicalMap.updateCanvas(), mapX, mapY);
+            }
+
+            //国情報更新
+            if (myCountry != null) { //自国が選択済みならば
+                const responce = sqlRequest("SELECT money FROM country WHERE countryId=" + myCountry.id + " AND timestamp>" + cLastTime);
+                if (responce.length < 1) return;
+                if (responce.length > -1) cLastTime = now(); //responceと無理やり同期させる
+                console.log(responce);
+                for (const i of responce) {
+                    document.getElementById("money").innerText = i.money;
+                }
+            }
+        }, 10000);
+    }
 }
 
 function fillstart(mouseX, mouseY) {
@@ -168,7 +176,7 @@ function sqlRequest(state = "") {
 }
 
 function test() {
-    console.log("自国の色：" + myCountry.r + "." + myCountry.g + "." + myCountry.b);
+    //console.log("自国の色：" + myCountry.r + "." + myCountry.g + "." + myCountry.b);
     //politicalMap.download();
     //resize(1, 1);
     //localStorage.clear();
@@ -178,6 +186,7 @@ function test() {
     //UPDATE province SET countryId=2,timestamp=NOW() WHERE r=207 AND g=223 AND b=223;
     //SELECT countryId,name from country order by countryId desc limit 3
     //(Math.floor(Math.random() * 40) + 1)
+    localStorage.clear();
 }
 
 function resize(scaleArg) {
