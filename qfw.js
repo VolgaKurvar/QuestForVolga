@@ -117,6 +117,7 @@ function fillstart(mouseX, mouseY) {
         document.getElementById("create").disabled = false;
         document.getElementById("select").disabled = true;
         document.getElementById("declareWar").disabled = true;
+        document.getElementById("changeName").disabled = true;
         return;
     }
     targetCountry = new Country(owner);
@@ -126,6 +127,7 @@ function fillstart(mouseX, mouseY) {
     document.getElementById("targetCountryName").innerText = owner.name;
     document.getElementById("targetMoney").innerText = owner.money;
     document.getElementById("targetMilitary").innerText = owner.military;
+    document.getElementById("changeName").disabled = false;
     if (myCountry !== null && myCountry.id !== targetCountry.id) document.getElementById("declareWar").disabled = false;
     else document.getElementById("declareWar").disabled = true;
 }
@@ -311,6 +313,16 @@ class Country {
             sqlRequest("INSERT INTO `province` (`x`, `y`, `r`, `g`, `b`, `timestamp`, `countryId`) VALUES (" + province.x + ", " + province.y + ", " + province.r + ", " + province.g + ", " + province.b + ", NOW(), " + this.id + ")");
         }
         politicalMap.fill(provinceMap, province.x, province.y, this.r, this.g, this.b);
+    }
+
+    setName(name) {
+        if (name == null) {
+            //nullが渡された時はinput要素から国名を取得します
+            name = document.getElementById("mcName").value;
+        }
+        this.name = name;
+        document.getElementById("targetCountryName").innerText = name;
+        sqlRequest("UPDATE country SET name='" + name + "', timestamp=NOW() WHERE countryId=" + this.id);
     }
 }
 
