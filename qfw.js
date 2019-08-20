@@ -188,6 +188,7 @@ function test() {
     //UPDATE province SET countryId=2,timestamp=NOW() WHERE r=207 AND g=223 AND b=223;
     //SELECT countryId,name from country order by countryId desc limit 3
     //(Math.floor(Math.random() * 40) + 1)
+    sqlRequest("UPDATE info SET politicalMapLastUpdate='1900/01/01 01:00:00'");
 }
 
 //地図の拡大率を変更します
