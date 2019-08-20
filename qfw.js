@@ -5,6 +5,7 @@ let provinceMap = null, politicalMap = null;
 let mapX = -2500, mapY = -300, annexMode = 0, pLastTime = 0, cLastTime = 0, myCountry = null, targetCountry = null;
 let selectingProvince = null;
 let ctx, canvasDC, scale = 1, map;
+const namelist = sqlRequest("SELECT (SELECT ROUND(COALESCE(AVG(x),0)) FROM province WHERE province.countryId=country.countryId) as x, (SELECT ROUND(COALESCE(AVG(y),0)) FROM province WHERE province.countryId=country.countryId) as y, name, (SELECT count(*) FROM province WHERE province.countryId=country.countryId) as province FROM country");
 
 onload = () => {
     //canvas初期化
@@ -376,6 +377,14 @@ class ImageDataController {
     updateCanvas() {
         //内部キャンバスのデータを更新し、それを返します
         this.ctx.putImageData(this.imageData, 0, 0);
+
+        //国名を表示
+        this.ctx.textAlign = "center";
+        for (const i of namelist) {
+            this.ctx.font = Math.ceil(128 / i.name.length) * Math.ceil(i.province / 64) + "px serif";
+            this.ctx.fillText(i.name, parseInt(i.x), parseInt(i.y));
+        }
+
         return this.canvas;
     }
 
