@@ -381,7 +381,7 @@ class ImageDataController {
         //国名を表示
         this.ctx.textAlign = "center";
         for (const i of namelist) {
-            this.ctx.font = Math.ceil(96 / i.name.length) * Math.ceil(i.province / 48) + "px serif";
+            this.ctx.font = Math.ceil(128 / i.name.length) * Math.ceil(i.province / 64) + "px serif";
             this.ctx.fillText(i.name, parseInt(i.x), parseInt(i.y));
         }
 
