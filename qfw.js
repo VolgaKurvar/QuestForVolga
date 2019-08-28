@@ -83,6 +83,7 @@ onload = () => {
 }
 
 function fillstart(mouseX, mouseY) {
+    const processStart = new Date().getTime();
     const x = Math.floor(mouseX / scale - mapX), y = Math.floor(mouseY / scale - mapY);
     let [r, g, b] = provinceMap.getColor(x, y);
     if (r == 0 && g == 0 && b == 0) return; //境界線をクリックした場合は以前のマスを選択したままになる
@@ -119,6 +120,7 @@ function fillstart(mouseX, mouseY) {
         document.getElementById("select").disabled = true;
         document.getElementById("declareWar").disabled = true;
         document.getElementById("changeName").disabled = true;
+        console.log("処理にかかった時間：" + (new Date().getTime() - processStart));
         return;
     }
     targetCountry = new Country(owner);
@@ -131,6 +133,7 @@ function fillstart(mouseX, mouseY) {
     document.getElementById("changeName").disabled = false;
     if (myCountry !== null && myCountry.id !== targetCountry.id) document.getElementById("declareWar").disabled = false;
     else document.getElementById("declareWar").disabled = true;
+    console.log("処理にかかった時間：" + (new Date().getTime() - processStart));
 }
 
 function switchAnnexMode() {
