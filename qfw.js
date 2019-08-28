@@ -83,24 +83,30 @@ onload = () => {
 }
 
 function fillstart(mouseX, mouseY) {
-    const processStart = new Date().getTime();
     const x = Math.floor(mouseX / scale - mapX), y = Math.floor(mouseY / scale - mapY);
     let [r, g, b] = provinceMap.getColor(x, y);
     if (r == 0 && g == 0 && b == 0) return; //境界線をクリックした場合は以前のマスを選択したままになる
 
-    //この時点でselectingProvinceには、前にクリックしたプロヴィンスの情報が入っている
-    if (selectingProvince != null) {
-        let owner = selectingProvince.getOwner();
-        if (owner !== null) politicalMap.fill(provinceMap, selectingProvince.x, selectingProvince.y, owner.r, owner.g, owner.b); //ここのlastXとlastYをどうにかする
-        else politicalMap.fill(provinceMap, selectingProvince.x, selectingProvince.y, 255, 255, 255);
-    }
-
-    //選択しているマスの情報を更新します
+    //選択しているマスを入れ替え
     //x,yにはマップ上での座標が代入されます
+    const pastSelectedProvince = selectingProvince;
     selectingProvince = new Province(x, y, r, g, b);
 
+    let owner;
+
+    if (pastSelectedProvince != null) { //以前選択していたプロビンスがある場合は、そのプロビンスと今選択しているプロビンスの領有国情報をまとめて取得
+        let oldProvinceOwner;
+        for (const i of sqlRequest("SELECT *,'first' FROM country WHERE countryId=(SELECT countryId FROM province WHERE r=" + pastSelectedProvince.r + " AND g=" + pastSelectedProvince.g + " AND b=" + pastSelectedProvince.b + ") UNION SELECT *,'second' FROM country WHERE countryId=(SELECT countryId FROM province WHERE r=" + selectingProvince.r + " AND g=" + selectingProvince.g + " AND b=" + selectingProvince.b + ")")) {
+            if (i.first === "first") oldProvinceOwner = i;
+            else if (i.first === "second") owner = i;
+        }
+        if (oldProvinceOwner !== null) politicalMap.fill(provinceMap, pastSelectedProvince.x, pastSelectedProvince.y, oldProvinceOwner.r, oldProvinceOwner.g, oldProvinceOwner.b);
+        else politicalMap.fill(provinceMap, pastSelectedProvince.x, pastSelectedProvince.y, 255, 255, 255);
+    } else {
+        owner = selectingProvince.getOwner();
+    }
+
     //併合モードが有効な場合は併合します
-    //テスト用の変数
     if (annexMode == 1) myCountry.annexProvince(selectingProvince);
     else politicalMap.fill(provinceMap, x, y, 255, 0, 0); //併合モードが有効でない場合はマスを赤く塗る
 
@@ -108,8 +114,6 @@ function fillstart(mouseX, mouseY) {
     ctx.drawImage(politicalMap.updateCanvas(), mapX, mapY);
 
     //選択しているマスの情報を表示する
-
-    let owner = selectingProvince.getOwner();
     if (owner === null) {
         targetCountry = null;
         document.getElementById("targetCountryFlag").src = "img/255.255.255.png";
@@ -120,7 +124,6 @@ function fillstart(mouseX, mouseY) {
         document.getElementById("select").disabled = true;
         document.getElementById("declareWar").disabled = true;
         document.getElementById("changeName").disabled = true;
-        console.log("処理にかかった時間：" + (new Date().getTime() - processStart));
         return;
     }
     targetCountry = new Country(owner);
@@ -133,7 +136,6 @@ function fillstart(mouseX, mouseY) {
     document.getElementById("changeName").disabled = false;
     if (myCountry !== null && myCountry.id !== targetCountry.id) document.getElementById("declareWar").disabled = false;
     else document.getElementById("declareWar").disabled = true;
-    console.log("処理にかかった時間：" + (new Date().getTime() - processStart));
 }
 
 function switchAnnexMode() {
@@ -231,7 +233,7 @@ class Province {
     }
 
     getOwner() {
-        const responce = sqlRequest("SELECT * FROM country WHERE countryId=(SELECT countryId FROM province WHERE r=" + this.r + " AND g=" + this.g + " AND b=" + this.b + ")");;
+        const responce = sqlRequest("SELECT * FROM country WHERE countryId=(SELECT countryId FROM province WHERE r=" + this.r + " AND g=" + this.g + " AND b=" + this.b + ")");
         if (responce.length < 1) return null; //国が見つからなかった時
         return responce[0];
     }
