@@ -92,10 +92,10 @@ function fillstart(mouseX, mouseY) {
     const pastSelectedProvince = selectingProvince;
     selectingProvince = new Province(x, y, r, g, b);
 
-    let owner;
+    let owner = null;
 
     if (pastSelectedProvince != null) { //以前選択していたプロビンスがある場合は、そのプロビンスと今選択しているプロビンスの領有国情報をまとめて取得
-        let oldProvinceOwner;
+        let oldProvinceOwner = null;
         for (const i of sqlRequest("SELECT *,'first' FROM country WHERE countryId=(SELECT countryId FROM province WHERE r=" + pastSelectedProvince.r + " AND g=" + pastSelectedProvince.g + " AND b=" + pastSelectedProvince.b + ") UNION SELECT *,'second' FROM country WHERE countryId=(SELECT countryId FROM province WHERE r=" + selectingProvince.r + " AND g=" + selectingProvince.g + " AND b=" + selectingProvince.b + ")")) {
             if (i.first === "first") oldProvinceOwner = i;
             else if (i.first === "second") owner = i;
