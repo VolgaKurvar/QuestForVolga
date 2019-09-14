@@ -53,7 +53,7 @@ onload = () => {
         for (const i of sqlRequest("SELECT x,y,country.r,country.g,country.b FROM province INNER JOIN country ON province.countryId=country.countryId WHERE province.timestamp>'" + politicalMapLastUpdateDB + "'")) {
             politicalMap.fill(provinceMap, parseInt(i.x), parseInt(i.y), parseInt(i.r), parseInt(i.g), parseInt(i.b));
         }
-        ctx.drawImage(politicalMap.updateCanvas(), mapX, mapY);
+        ctx.drawImage(politicalMap.updateCanvas(true), mapX, mapY);
 
         setInterval(() => {
             //地図更新
@@ -65,7 +65,7 @@ onload = () => {
                 for (const i of responce) {
                     politicalMap.fill(provinceMap, parseInt(i.x), parseInt(i.y), parseInt(i.r), parseInt(i.g), parseInt(i.b));
                 }
-                ctx.drawImage(politicalMap.updateCanvas(), mapX, mapY);
+                ctx.drawImage(politicalMap.updateCanvas(true), mapX, mapY);
             }
 
             //国情報更新
@@ -111,7 +111,7 @@ function fillstart(mouseX, mouseY) {
     else politicalMap.fill(provinceMap, x, y, 255, 0, 0); //併合モードが有効でない場合はマスを赤く塗る
 
     //地図を更新します
-    ctx.drawImage(politicalMap.updateCanvas(), mapX, mapY);
+    ctx.drawImage(politicalMap.updateCanvas(true), mapX, mapY);
 
     //選択しているマスの情報を表示する
     if (owner === null) {
@@ -255,7 +255,7 @@ class Province {
         const country = new Country(sqlRequest("SELECT * from country order by countryId desc limit 1")[0]); //最新のidを取得
         country.annexProvince(this);
         politicalMap.fill(provinceMap, this.x, this.x, r, g, b);
-        ctx.drawImage(politicalMap.updateCanvas(), mapX, mapY);
+        ctx.drawImage(politicalMap.updateCanvas(true), mapX, mapY);
         return country;
     }
 }
@@ -379,15 +379,17 @@ class ImageDataController {
         }
     }
 
-    updateCanvas() {
+    updateCanvas(isDrawText) {
         //内部キャンバスのデータを更新し、それを返します
         this.ctx.putImageData(this.imageData, 0, 0);
 
         //国名を表示
-        this.ctx.textAlign = "center";
-        for (const i of namelist) {
-            this.ctx.font = Math.ceil(128 / i.name.length) * Math.ceil(i.province / 64) + "px serif";
-            this.ctx.fillText(i.name, parseInt(i.x), parseInt(i.y));
+        if (isDrawText) {
+            this.ctx.textAlign = "center";
+            for (const i of namelist) {
+                this.ctx.font = Math.ceil(128 / i.name.length) * Math.ceil(i.province / 64) + "px serif";
+                this.ctx.fillText(i.name, parseInt(i.x), parseInt(i.y));
+            }
         }
 
         return this.canvas;
@@ -408,7 +410,7 @@ class ImageDataController {
             if (owner !== null) this.fill(provinceMap, selectingProvince.x, selectingProvince.y, owner.r, owner.g, owner.b);
             else this.fill(provinceMap, selectingProvince.x, selectingProvince.y, 255, 255, 255);
         }
-        return this.updateCanvas().toDataURL("image/png");
+        return this.updateCanvas(false).toDataURL("image/png");
     }
 }
 
